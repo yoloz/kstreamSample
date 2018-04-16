@@ -1,0 +1,6 @@
+使用如下:
+bin/ks-server-start.sh [-daemon] main.properties [-test]
+#### -daemon 后台运行
+#### -test 会自动随机applicationId,可在正式运行前测试是否可行
+
+bin/ks-server-stop.sh main.properties
