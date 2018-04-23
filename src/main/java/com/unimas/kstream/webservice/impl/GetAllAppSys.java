@@ -75,7 +75,7 @@ public class GetAllAppSys extends HttpServlet {
      * @see ServletResponse#setContentType
      */
     @Override
-    protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws IOException {
+    protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws IOException {
         String body = WSUtils.readInputStream(req.getInputStream());
         logger.debug("getAllAppSys==>" + body);
         List<Map<String, String>> list = new ArrayList<>(KsServer.caches.size());
