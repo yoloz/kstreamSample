@@ -12,9 +12,9 @@ case $1 in
   ;;
 esac
 . `dirname $0`/env.sh
-log_dir=${KS_DIR}/web
+log_dir=${KS_DIR}/logs
 #echo "Log recorded in $log_dir"
-#test -d ${log_dir} || mkdir -p ${log_dir}
+test -d ${log_dir} || mkdir -p ${log_dir}
 if [ -f ${KS_DIR}/config/log4j.properties ]; then
    KS_LOG4J_OPTS="-Dlog4j.configuration=file:$KS_DIR/config/log4j.properties"
 else

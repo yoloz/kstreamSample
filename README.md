@@ -6,6 +6,7 @@ KStream/
   README.md
   pom.xml
   app/
+  logs/
   bin/
   config/
   libs/
@@ -20,27 +21,24 @@ KStream/
 - `libs` dependencies of KS.
 - `src` java source of KS.
 - `app` application conf path.
+- `logs` server logs
 
 ### 使用说明：
-- 1,KS助手,首先启动ks-server-web,具体使用参见bin里的说明,
-默认端口12583,如果要修改端口则页面要重新生成.启动后页面访问`http://ip:12583`
-服务的创建修改启动停止等都可以在页面中操作.
-启动的服务不受web-server影响,ks-server-web可随时启动停止(暂时未加入安全相关,使用完建议关闭).
-- 2,手动写配置文件,可以使用bin里的ks-app-start启动,具体使用参见
-bin里的说明.适用先前最新版配置文件.
-- 3,对于先前最新版配置文件,web自行鉴别展示。请自行组织文件结构如下:
-```
-app/    安装目录下的app目录
-  app_id/
-     main.properties 入口文件,必须此名称
-     output.properties 输出文件,必须此名称
-     xxx.properties 操作数据源文件
-```
->Note:main.properties添加application.name=xxxx;
-操作文件添加operation.name=文件名;
-数据源文件名为ks.name值;
+启动ks-server,具体使用参见bin里的说明,默认端口12583,修改在文件config/server.properties.
+启动后页面访问`http://ip:12583/api`.说明如下：
 
->Note:第三点暂未测试；
+| *api* | *描述* |
+|:-----:|:-------------:|
+|/kstream/orderApp|保存操作顺序|
+|/kstream/storeApp|保存信息|
+|/kstream/deleteApp|删除任务|
+|/kstream/deployApp|部署任务|
+|/kstream/startApp|启动任务|
+|/kstream/stopApp|停止任务|
+|/kstream/getApp|获取配置信息|
+|/kstream/getAppSys|获取任务信息|
+|/kstream/getAllAppSys|获取所有任务信息|
+
 
 ### 重置已运行的任务(希望从头开始重新处理数据)
 - 停止任务,记下任务的applicationId；
