@@ -123,9 +123,9 @@ public class GetAppSys extends HttpServlet {
             map.put("service_time", "—");
         }
         OutputStream outputStream = resp.getOutputStream();
-        String result = "{\"success\":true,\"results\":\"" + KJson.writeValue(map,
+        String result = "{\"success\":true,\"results\":" + KJson.writeValue(map,
                 new TypeToken<Map<String, String>>() {
-                }.getType()) + "\"}";
+                }.getType()) + "}";
         outputStream.write(result.getBytes("utf-8"));
     }
 }

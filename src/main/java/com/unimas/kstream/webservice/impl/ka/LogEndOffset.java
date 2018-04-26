@@ -85,7 +85,7 @@ public class LogEndOffset extends HttpServlet {
         }
         OutputStream outputStream = resp.getOutputStream();
         if (error == null) {
-            String result = "{\"success\":true,\"results\":\"" + KJson.writeValueAsString(offsets) + "\"}";
+            String result = "{\"success\":true,\"results\":" + KJson.writeValueAsString(offsets) + "}";
             outputStream.write(result.getBytes("utf-8"));
         } else {
             String result = "{\"success\":true,\"error\":\"" + error + "\"}";

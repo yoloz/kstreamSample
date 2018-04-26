@@ -93,9 +93,9 @@ public class GetAllAppSys extends HttpServlet {
             list.add(map);
         }
         OutputStream outputStream = resp.getOutputStream();
-        String result = "{\"success\":true,\"results\":\"" + KJson.writeValue(list,
+        String result = "{\"success\":true,\"results\":" + KJson.writeValue(list,
                 new TypeToken<List<Map<String, String>>>() {
-                }.getType()) + "\"}";
+                }.getType()) + "}";
         outputStream.write(result.getBytes("utf-8"));
     }
 }

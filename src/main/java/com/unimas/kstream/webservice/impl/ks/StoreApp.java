@@ -83,7 +83,7 @@ public class StoreApp extends HttpServlet {
         String body = WSUtils.readInputStream(req.getInputStream());
         logger.debug("storeApp==>" + body);
         Map<String, Object> bodyObj = KJson.readValue(body);
-        String service_id = String.valueOf(bodyObj.get("service_id"));
+        String service_id = (String)bodyObj.get("service_id");
         String type = String.valueOf(bodyObj.get("type"));
         Map<String, Object> value = (Map<String, Object>) bodyObj.get("value");
         String error = WSUtils.unModify(service_id);

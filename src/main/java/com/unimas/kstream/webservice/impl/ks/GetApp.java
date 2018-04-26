@@ -137,7 +137,7 @@ public class GetApp extends HttpServlet {
         OutputStream outputStream = resp.getOutputStream();
         String resultS;
         if (error == null) {
-            resultS = "{\"success\":true,\"results\":\"" + result + "\"}";
+            resultS = "{\"success\":true,\"results\":" + result + "}";
             outputStream.write(resultS.getBytes("utf-8"));
         } else {
             resultS = "{\"success\":true,\"error\":\"" + error + "\"}";

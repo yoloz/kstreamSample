@@ -87,9 +87,9 @@ public class GetTopic extends HttpServlet {
         }
         OutputStream outputStream = resp.getOutputStream();
         if (error == null) {
-            String result = "{\"success\":true,\"results\":\"" + KJson.writeValue(details,
+            String result = "{\"success\":true,\"results\":" + KJson.writeValue(details,
                     new TypeToken<List<Map<String, String>>>() {
-                    }.getType()) + "\"}";
+                    }.getType()) + "}";
             outputStream.write(result.getBytes("utf-8"));
         } else {
             String result = "{\"success\":true,\"error\":\"" + error + "\"}";
