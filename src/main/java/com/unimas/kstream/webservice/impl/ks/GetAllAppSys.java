@@ -1,4 +1,4 @@
-package com.unimas.kstream.webservice.impl;
+package com.unimas.kstream.webservice.impl.ks;
 
 import com.google.gson.reflect.TypeToken;
 import com.unimas.kstream.KsServer;

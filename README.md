@@ -29,15 +29,18 @@ KStream/
 
 | *api* | *描述* |
 |:-----:|:-------------:|
-|/kstream/orderApp|保存操作顺序|
-|/kstream/storeApp|保存信息|
-|/kstream/deleteApp|删除任务|
-|/kstream/deployApp|部署任务|
-|/kstream/startApp|启动任务|
-|/kstream/stopApp|停止任务|
-|/kstream/getApp|获取配置信息|
-|/kstream/getAppSys|获取任务信息|
-|/kstream/getAllAppSys|获取所有任务信息|
+|/cii/ks/orderApp|保存操作顺序|
+|/cii/ks/storeApp|保存信息|
+|/cii/ks/deleteApp|删除任务|
+|/cii/ks/deployApp|部署任务|
+|/cii/ks/startApp|启动任务|
+|/cii/ks/stopApp|停止任务|
+|/cii/ks/getApp|查询配置信息|
+|/cii/ks/getAppSys|查询任务信息|
+|/cii/ks/getAllAppSys|获取所有任务信息|
+|/cii/ka/getAllTopics|获取所有主题|
+|/cii/ka/getTopic|查询主题详情|
+|/cii/ka/logEndOffset|查询主题日志偏移量|
 
 
 ### 重置已运行的任务(希望从头开始重新处理数据)

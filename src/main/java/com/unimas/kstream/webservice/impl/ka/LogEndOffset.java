@@ -1,8 +1,6 @@
-package com.unimas.kstream.webservice.impl;
+package com.unimas.kstream.webservice.impl.ka;
 
 import com.unimas.kstream.KsServer;
-import com.unimas.kstream.StopProcess;
-import com.unimas.kstream.bean.AppInfo;
 import com.unimas.kstream.bean.KJson;
 import com.unimas.kstream.webservice.WSUtils;
 import org.slf4j.Logger;
@@ -15,12 +13,11 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.sql.SQLException;
 import java.util.Map;
 
-public class StopApp extends HttpServlet {
+public class LogEndOffset extends HttpServlet {
 
-    private final Logger logger = LoggerFactory.getLogger(StopApp.class);
+    private final Logger logger = LoggerFactory.getLogger(LogEndOffset.class);
 
     /**
      * Called by the server (via the <code>service</code> method)
@@ -75,29 +72,24 @@ public class StopApp extends HttpServlet {
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws IOException {
         String body = WSUtils.readInputStream(req.getInputStream());
-        logger.debug("stopApp==>" + body);
+        logger.debug("logEndOffset==>" + body);
         Map<String, String> bodyObj = KJson.readStringValue(body);
-        String service_id = bodyObj.get("service_id");
-        AppInfo app = KsServer.caches.get(service_id);
+        String topic = bodyObj.get("topic");
+        Map<String, Object> offsets = null;
         String error = null;
         try {
-            if (app.getStatus() == AppInfo.Status.START || app.getStatus() == AppInfo.Status.RUN) {
-                KsServer.getMysqlOperator().fixUpdate("update ksapp set service_status='stop' where service_id=?",
-                        service_id);
-                app.setStatus(AppInfo.Status.STOP);
-                app.setPid("");
-                StopProcess.stop(KsServer.app_dir.resolve(service_id).resolve("pid"));
-            } else error = app.getName() + " 未运行或启动,无需停止!";
-        } catch (SQLException e) {
-            error = "停止失败:" + e.getMessage();
-            logger.error(service_id, e.getMessage());
+            offsets = KsServer.getKaJMX().getLogEndOffset(topic);
+        } catch (Throwable e) {
+            error = e.getMessage();
+            logger.error(error, e);
         }
         OutputStream outputStream = resp.getOutputStream();
         if (error == null) {
-            outputStream.write("{\"success\":true}".getBytes("utf-8"));
+            String result = "{\"success\":true,\"results\":\"" + KJson.writeValueAsString(offsets) + "\"}";
+            outputStream.write(result.getBytes("utf-8"));
         } else {
-            String msg = "{\"success\":true,\"error\":\"" + error + "\"}";
-            outputStream.write(msg.getBytes("utf-8"));
+            String result = "{\"success\":true,\"error\":\"" + error + "\"}";
+            outputStream.write(result.getBytes("utf-8"));
         }
     }
 }

@@ -1,6 +1,6 @@
-package com.unimas.kstream.webservice.impl;
+package com.unimas.kstream.webservice.impl.ks;
 
-import com.google.gson.reflect.TypeToken;
+
 import com.unimas.kstream.KsServer;
 import com.unimas.kstream.bean.KJson;
 import com.unimas.kstream.webservice.MysqlOperator;
@@ -15,14 +15,17 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.nio.file.FileVisitResult;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.SimpleFileVisitor;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Map;
 
-public class GetApp extends HttpServlet {
+public class DeleteApp extends HttpServlet {
 
-    private Logger logger = LoggerFactory.getLogger(GetApp.class);
+    private final Logger logger = LoggerFactory.getLogger(DeleteApp.class);
 
     /**
      * Called by the server (via the <code>service</code> method)
@@ -77,71 +80,76 @@ public class GetApp extends HttpServlet {
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws IOException {
         String body = WSUtils.readInputStream(req.getInputStream());
-        logger.debug("getApp==>" + body);
+        logger.debug("deleteApp==>" + body);
         Map<String, String> bodyObj = KJson.readStringValue(body);
         String service_id = bodyObj.get("service_id");
         String type = bodyObj.get("type");
-        String error = null;
-        String result = null;
-        try {
-            MysqlOperator mysqlOperator = KsServer.getMysqlOperator();
+        String type_id = bodyObj.get("type_id");
+        String error = WSUtils.unModify(service_id);
+        if (error == null) {
+            String sql = null;
+            String status = null;
+            Object[] params = null;
             switch (type) {
                 case "main":
-                    Map<String, String> main = mysqlOperator.query(
-                            "select service_name,main_json,service_desc from ksapp where service_id=?",
-                            service_id).get(0);
-                    Map<String, Object> mo = KJson.readValue(main.remove("main_json"));
-                    mo.putAll(main);
-                    result = KJson.writeValueAsString(mo);
+                    sql = "delete from ksapp where service_id=?";
+                    params = new String[]{service_id};
                     break;
                 case "input":
-                    List<Map<String, String>> inputs = mysqlOperator.query(
-                            "select input_id,input_json from ksinput where service_id=?",
-                            service_id);
-                    List<Map<String, Object>> il = new ArrayList<>();
-                    for (Map<String, String> input : inputs) {
-                        Map<String, Object> io = KJson.readValue(input.remove("input_json"));
-                        io.put("input_id", input.remove("input_id"));
-                        il.add(io);
-                    }
-                    result = KJson.writeValue(il, new TypeToken<List<Map<String, Object>>>() {
-                    }.getType());
+                    status = "update ksapp set service_status='init' where service_id='" + service_id + "'";
+                    sql = "delete from ksinput where service_id=? and input_id=?";
+                    params = new String[]{service_id, type_id};
                     break;
                 case "operation":
-                    List<Map<String, String>> operations = mysqlOperator.query(
-                            "select operation_id,operation_json from ksoperations where service_id=?",
-                            service_id);
-                    List<Map<String, Object>> ol = new ArrayList<>();
-                    for (Map<String, String> operation : operations) {
-                        Map<String, Object> oo = KJson.readValue(operation.remove("operation_json"));
-                        oo.put("operation_id", operation.remove("operation_id"));
-                        ol.add(oo);
-                    }
-                    result = KJson.writeValue(ol, new TypeToken<List<Map<String, Object>>>() {
-                    }.getType());
+                    status = "update ksapp set service_status='init' where service_id='" + service_id + "'";
+                    sql = "delete from ksoperations where service_id=? and operation_id=?";
+                    params = new String[]{service_id, type_id};
                     break;
                 case "output":
-                    Map<String, String> output = mysqlOperator.query(
-                            "select output_json from ksoutput where service_id=?",
-                            service_id).get(0);
-                    Map<String, Object> om = KJson.readValue(output.remove("output_json"));
-                    result = KJson.writeValueAsString(om);
+                    status = "update ksapp set service_status='init' where service_id='" + service_id + "'";
+                    sql = "delete from ksoutput where service_id=?";
+                    params = new String[]{service_id};
                     break;
                 default:
-                    error = "getApp=>type:" + type + " 不支持";
+                    error = "deleteApp=>type:" + type + " 不支持";
             }
-        } catch (SQLException e) {
-            error = "获取信息失败:" + e.getMessage();
-            logger.error(error, e);
+            if (error == null) {
+                try {
+                    MysqlOperator mysqlOperator = KsServer.getMysqlOperator();
+                    mysqlOperator.update(status, null, sql, params);
+                    if ("main".equals(type)) {
+                        KsServer.caches.remove(service_id);
+                        Path dir = KsServer.app_dir.resolve(service_id);
+                        Files.walkFileTree(dir, new EmptyDir());
+                    } else WSUtils.initCacheStatus(service_id);
+                } catch (SQLException e) {
+                    error = "删除失败:" + e.getMessage();
+                    logger.error(error, e);
+                }
+            }
         }
         OutputStream outputStream = resp.getOutputStream();
-        String resultS;
+        String result;
         if (error == null) {
-            resultS = "{\"success\":true,\"results\":\"" + result + "\"}";
-            outputStream.write(resultS.getBytes("utf-8"));
+            outputStream.write("{\"success\":true}".getBytes("utf-8"));
         } else {
-            resultS = "{\"success\":true,\"error\":\"" + error + "\"}";
-            outputStream.write(resultS.getBytes("utf-8"));
+            result = "{\"success\":true,\"error\":\"" + error + "\"}";
+            outputStream.write(result.getBytes("utf-8"));
+        }
+    }
+
+
+    private class EmptyDir extends SimpleFileVisitor<Path> {
+        @Override
+        public FileVisitResult visitFile(Path file, BasicFileAttributes attr) throws IOException {
+            Files.delete(file);
+            return FileVisitResult.CONTINUE;
+        }
+
+        @Override
+        public FileVisitResult postVisitDirectory(Path dir, IOException exc) throws IOException {
+            Files.delete(dir);
+            return FileVisitResult.CONTINUE;
         }
     }
 }

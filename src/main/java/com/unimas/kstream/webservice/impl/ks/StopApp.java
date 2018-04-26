@@ -1,9 +1,9 @@
-package com.unimas.kstream.webservice.impl;
-
+package com.unimas.kstream.webservice.impl.ks;
 
 import com.unimas.kstream.KsServer;
+import com.unimas.kstream.StopProcess;
+import com.unimas.kstream.bean.AppInfo;
 import com.unimas.kstream.bean.KJson;
-import com.unimas.kstream.webservice.MysqlOperator;
 import com.unimas.kstream.webservice.WSUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -15,17 +15,12 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.nio.file.FileVisitResult;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.SimpleFileVisitor;
-import java.nio.file.attribute.BasicFileAttributes;
 import java.sql.SQLException;
 import java.util.Map;
 
-public class DeleteApp extends HttpServlet {
+public class StopApp extends HttpServlet {
 
-    private final Logger logger = LoggerFactory.getLogger(DeleteApp.class);
+    private final Logger logger = LoggerFactory.getLogger(StopApp.class);
 
     /**
      * Called by the server (via the <code>service</code> method)
@@ -80,76 +75,29 @@ public class DeleteApp extends HttpServlet {
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws IOException {
         String body = WSUtils.readInputStream(req.getInputStream());
-        logger.debug("deleteApp==>" + body);
+        logger.debug("stopApp==>" + body);
         Map<String, String> bodyObj = KJson.readStringValue(body);
         String service_id = bodyObj.get("service_id");
-        String type = bodyObj.get("type");
-        String type_id = bodyObj.get("type_id");
-        String error = WSUtils.unModify(service_id);
-        if (error == null) {
-            String sql = null;
-            String status = null;
-            Object[] params = null;
-            switch (type) {
-                case "main":
-                    sql = "delete from ksapp where service_id=?";
-                    params = new String[]{service_id};
-                    break;
-                case "input":
-                    status = "update ksapp set service_status='init' where service_id='" + service_id + "'";
-                    sql = "delete from ksinput where service_id=? and input_id=?";
-                    params = new String[]{service_id, type_id};
-                    break;
-                case "operation":
-                    status = "update ksapp set service_status='init' where service_id='" + service_id + "'";
-                    sql = "delete from ksoperations where service_id=? and operation_id=?";
-                    params = new String[]{service_id, type_id};
-                    break;
-                case "output":
-                    status = "update ksapp set service_status='init' where service_id='" + service_id + "'";
-                    sql = "delete from ksoutput where service_id=?";
-                    params = new String[]{service_id};
-                    break;
-                default:
-                    error = "deleteApp=>type:" + type + " 不支持";
-            }
-            if (error == null) {
-                try {
-                    MysqlOperator mysqlOperator = KsServer.getMysqlOperator();
-                    mysqlOperator.update(status, null, sql, params);
-                    if ("main".equals(type)) {
-                        KsServer.caches.remove(service_id);
-                        Path dir = KsServer.app_dir.resolve(service_id);
-                        Files.walkFileTree(dir, new EmptyDir());
-                    } else WSUtils.initCacheStatus(service_id);
-                } catch (SQLException e) {
-                    error = "删除失败:" + e.getMessage();
-                    logger.error(error, e);
-                }
-            }
+        AppInfo app = KsServer.caches.get(service_id);
+        String error = null;
+        try {
+            if (app.getStatus() == AppInfo.Status.START || app.getStatus() == AppInfo.Status.RUN) {
+                KsServer.getMysqlOperator().fixUpdate("update ksapp set service_status='stop' where service_id=?",
+                        service_id);
+                app.setStatus(AppInfo.Status.STOP);
+                app.setPid("");
+                StopProcess.stop(KsServer.app_dir.resolve(service_id).resolve("pid"));
+            } else error = app.getName() + " 未运行或启动,无需停止!";
+        } catch (SQLException e) {
+            error = "停止失败:" + e.getMessage();
+            logger.error(service_id, e.getMessage());
         }
         OutputStream outputStream = resp.getOutputStream();
-        String result;
         if (error == null) {
             outputStream.write("{\"success\":true}".getBytes("utf-8"));
         } else {
-            result = "{\"success\":true,\"error\":\"" + error + "\"}";
-            outputStream.write(result.getBytes("utf-8"));
-        }
-    }
-
-
-    private class EmptyDir extends SimpleFileVisitor<Path> {
-        @Override
-        public FileVisitResult visitFile(Path file, BasicFileAttributes attr) throws IOException {
-            Files.delete(file);
-            return FileVisitResult.CONTINUE;
-        }
-
-        @Override
-        public FileVisitResult postVisitDirectory(Path dir, IOException exc) throws IOException {
-            Files.delete(dir);
-            return FileVisitResult.CONTINUE;
+            String msg = "{\"success\":true,\"error\":\"" + error + "\"}";
+            outputStream.write(msg.getBytes("utf-8"));
         }
     }
 }

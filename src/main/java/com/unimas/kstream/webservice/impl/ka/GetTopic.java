@@ -1,10 +1,8 @@
-package com.unimas.kstream.webservice.impl;
+package com.unimas.kstream.webservice.impl.ka;
 
 import com.google.gson.reflect.TypeToken;
 import com.unimas.kstream.KsServer;
-import com.unimas.kstream.bean.AppInfo;
 import com.unimas.kstream.bean.KJson;
-import com.unimas.kstream.bean.MutablePair;
 import com.unimas.kstream.webservice.WSUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -14,16 +12,14 @@ import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.nio.charset.Charset;
-import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
-public class GetAppSys extends HttpServlet {
+public class GetTopic extends HttpServlet {
 
-    private final Logger logger = LoggerFactory.getLogger(GetAppSys.class);
+    private final Logger logger = LoggerFactory.getLogger(GetTopic.class);
 
     /**
      * Called by the server (via the <code>service</code> method)
@@ -78,54 +74,26 @@ public class GetAppSys extends HttpServlet {
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws IOException {
         String body = WSUtils.readInputStream(req.getInputStream());
-        logger.debug("getAppSys==>" + body);
+        logger.debug("getTopic==>" + body);
         Map<String, String> bodyObj = KJson.readStringValue(body);
-        String service_id = bodyObj.get("service_id");
-        AppInfo app = KsServer.caches.get(service_id);
-        Map<String, Object> map = new HashMap<>();
-        map.put("service_id", service_id);
-        map.put("service_name", app.getName());
-        map.put("service_desc", app.getDesc());
-        File pf = KsServer.app_dir.resolve(service_id).resolve("pid").toFile();
-        if (app.getStatus() == AppInfo.Status.START) {
-            if (pf.exists()) {
-                logger.info(service_id + " start success,change status to running");
-                app.setStatus(AppInfo.Status.RUN);
-            }
-        }
-        if (app.getStatus() == AppInfo.Status.RUN) {
-            if (!pf.exists()) {
-                logger.error(service_id + " status run but pid file is not exit,change status to stop");
-                app.setStatus(AppInfo.Status.STOP);
-                app.setPid("");
-            }
-        }
-        map.put("service_status", app.getStatus().getValue());
-        if (app.getStatus() == AppInfo.Status.START) {
-            map.put("service_cpu", "0");
-            map.put("service_mem", "0");
-            map.put("service_time", "0");
-        } else if (app.getStatus() == AppInfo.Status.RUN) {
-            String pid = app.getPid();
-            if (pid.isEmpty()) {//点击运行
-                app.setPid(com.google.common.io.Files.readFirstLine(pf, Charset.forName("UTF-8")));
-                MutablePair<String, String> sys = WSUtils.getSysInfo(app.getPid());
-                app.setCpu(sys.getLeft());
-                app.setMem(sys.getRight());
-            }
-            app.setRuntime(WSUtils.getRunTime(service_id));
-            map.put("service_cpu", app.getCpu());
-            map.put("service_mem", app.getMem());
-            map.put("service_time", app.getRuntime());
-        } else {
-            map.put("service_cpu", "—");
-            map.put("service_mem", "—");
-            map.put("service_time", "—");
+        String topic = bodyObj.get("topic");
+        List<Map<String, String>> details = null;
+        String error = null;
+        try {
+            details = KsServer.getKsKaClient().getTopicDetail(topic);
+        } catch (Throwable e) {
+            error = e.getMessage();
+            logger.error(error, e);
         }
         OutputStream outputStream = resp.getOutputStream();
-        String result = "{\"success\":true,\"results\":\"" + KJson.writeValue(map,
-                new TypeToken<Map<String, String>>() {
-                }.getType()) + "\"}";
-        outputStream.write(result.getBytes("utf-8"));
+        if (error == null) {
+            String result = "{\"success\":true,\"results\":\"" + KJson.writeValue(details,
+                    new TypeToken<List<Map<String, String>>>() {
+                    }.getType()) + "\"}";
+            outputStream.write(result.getBytes("utf-8"));
+        } else {
+            String result = "{\"success\":true,\"error\":\"" + error + "\"}";
+            outputStream.write(result.getBytes("utf-8"));
+        }
     }
 }

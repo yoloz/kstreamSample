@@ -3,17 +3,22 @@ package com.unimas.kstream;
 import com.google.common.collect.ImmutableList;
 import com.unimas.kstream.bean.AppInfo;
 import com.unimas.kstream.error.KRunException;
+import com.unimas.kstream.kafka.KaJMX;
+import com.unimas.kstream.kafka.KsKaClient;
 import com.unimas.kstream.webservice.RegularlyUpdate;
 import com.unimas.kstream.webservice.MysqlOperator;
-import com.unimas.kstream.webservice.impl.DeleteApp;
-import com.unimas.kstream.webservice.impl.DeployApp;
-import com.unimas.kstream.webservice.impl.GetAllAppSys;
-import com.unimas.kstream.webservice.impl.GetApp;
-import com.unimas.kstream.webservice.impl.GetAppSys;
-import com.unimas.kstream.webservice.impl.OrderApp;
-import com.unimas.kstream.webservice.impl.StartApp;
-import com.unimas.kstream.webservice.impl.StopApp;
-import com.unimas.kstream.webservice.impl.StoreApp;
+import com.unimas.kstream.webservice.impl.ka.GetAllTopics;
+import com.unimas.kstream.webservice.impl.ka.GetTopic;
+import com.unimas.kstream.webservice.impl.ka.LogEndOffset;
+import com.unimas.kstream.webservice.impl.ks.DeleteApp;
+import com.unimas.kstream.webservice.impl.ks.DeployApp;
+import com.unimas.kstream.webservice.impl.ks.GetAllAppSys;
+import com.unimas.kstream.webservice.impl.ks.GetApp;
+import com.unimas.kstream.webservice.impl.ks.GetAppSys;
+import com.unimas.kstream.webservice.impl.ks.OrderApp;
+import com.unimas.kstream.webservice.impl.ks.StartApp;
+import com.unimas.kstream.webservice.impl.ks.StopApp;
+import com.unimas.kstream.webservice.impl.ks.StoreApp;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.servlet.ServletHandler;
 import org.eclipse.jetty.servlets.CrossOriginFilter;
@@ -50,6 +55,8 @@ public class KsServer {
     public static final ConcurrentHashMap<String, AppInfo> caches = new ConcurrentHashMap<>();
 
     private static MysqlOperator mysqlOperator = null;
+    private static KaJMX kaJMX = null;
+    private static KsKaClient ksKaClient = null;
     private final int port;
     private Server server;
 
@@ -64,30 +71,34 @@ public class KsServer {
             }
             this.port = Integer.parseInt(p.getProperty("port"));
             mysqlOperator = new MysqlOperator(p);
+            String jmxUrl = p.getProperty("jmx.url");
+            if (jmxUrl != null && !jmxUrl.isEmpty()) kaJMX = new KaJMX(jmxUrl);
+            else logger.warn("===============kafka jmx url undefined===============");
+            String zkUrl = p.getProperty("zk.url");
+            if (zkUrl != null && !zkUrl.isEmpty()) ksKaClient = KsKaClient.apply(zkUrl);
+            else logger.warn("===============zookeeper url undefined===============");
             if (Files.notExists(app_dir, LinkOption.NOFOLLOW_LINKS)) Files.createDirectory(app_dir);
         } else {
             throw new Exception(cf + " is not exist!");
         }
     }
 
-    public static MysqlOperator getMysqlOperator() {
-        if (mysqlOperator == null) throw new KRunException("mysql operator is null...");
-        return mysqlOperator;
-    }
-
     private void start() throws Exception {
         this.server = new Server(port);
         ServletHandler servletHandler = new ServletHandler();
-        servletHandler.addServletWithMapping(OrderApp.class, "/kstream/orderApp");
-        servletHandler.addServletWithMapping(StoreApp.class, "/kstream/storeApp");
-        servletHandler.addServletWithMapping(DeleteApp.class, "/kstream/deleteApp");
-        servletHandler.addServletWithMapping(DeployApp.class, "/kstream/deployApp");
-        servletHandler.addServletWithMapping(StartApp.class, "/kstream/startApp");
-        servletHandler.addServletWithMapping(StopApp.class, "/kstream/stopApp");
-        servletHandler.addServletWithMapping(GetApp.class, "/kstream/getApp");
-        servletHandler.addServletWithMapping(GetAppSys.class, "/kstream/getAppSys");
-        servletHandler.addServletWithMapping(GetAllAppSys.class, "/kstream/getAllAppSys");
-        servletHandler.addFilterWithMapping(CrossOriginFilter.class, "/kstream/*", EnumSet.of(DispatcherType.REQUEST));
+        servletHandler.addServletWithMapping(OrderApp.class, "/cii/ks/orderApp");
+        servletHandler.addServletWithMapping(StoreApp.class, "/cii/ks/storeApp");
+        servletHandler.addServletWithMapping(DeleteApp.class, "/cii/ks/deleteApp");
+        servletHandler.addServletWithMapping(DeployApp.class, "/cii/ks/deployApp");
+        servletHandler.addServletWithMapping(StartApp.class, "/cii/ks/startApp");
+        servletHandler.addServletWithMapping(StopApp.class, "/cii/ks/stopApp");
+        servletHandler.addServletWithMapping(GetApp.class, "/cii/ks/getApp");
+        servletHandler.addServletWithMapping(GetAppSys.class, "/cii/ks/getAppSys");
+        servletHandler.addServletWithMapping(GetAllAppSys.class, "/cii/ks/getAllAppSys");
+        servletHandler.addServletWithMapping(GetAllTopics.class, "/cii/ka/getAllTopics");
+        servletHandler.addServletWithMapping(GetTopic.class, "/cii/ka/getTopic");
+        servletHandler.addServletWithMapping(LogEndOffset.class, "/cii/ka/logEndOffset");
+        servletHandler.addFilterWithMapping(CrossOriginFilter.class, "/cii/*", EnumSet.of(DispatcherType.REQUEST));
         this.server.setHandler(servletHandler);
         this.server.start();
         Files.write(bin_dir.resolve("pid"), ManagementFactory.getRuntimeMXBean()
@@ -130,6 +141,8 @@ public class KsServer {
     private void stop() {
         try {
             if (mysqlOperator != null) mysqlOperator.close();
+            if (kaJMX != null) kaJMX.close();
+            if (ksKaClient != null) ksKaClient.close();
             if (this.server != null) this.server.stop();
             Files.delete(bin_dir.resolve("pid"));
         } catch (Exception e) {
@@ -168,5 +181,23 @@ public class KsServer {
             System.exit(-1);
         }
         System.exit(0);
+    }
+
+
+    //======================================
+    //**************************************
+    //======================================
+    public static MysqlOperator getMysqlOperator() {
+        if (mysqlOperator == null) throw new KRunException("mysql operator is null...");
+        return mysqlOperator;
+    }
+
+    public static KaJMX getKaJMX() {
+        return kaJMX;
+    }
+
+
+    public static KsKaClient getKsKaClient() {
+        return ksKaClient;
     }
 }

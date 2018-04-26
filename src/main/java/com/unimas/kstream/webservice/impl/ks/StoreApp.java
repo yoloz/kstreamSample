@@ -1,4 +1,4 @@
-package com.unimas.kstream.webservice.impl;
+package com.unimas.kstream.webservice.impl.ks;
 
 import com.unimas.kstream.KsServer;
 import com.unimas.kstream.bean.KJson;
