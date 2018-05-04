@@ -82,35 +82,35 @@ public class StartApp extends HttpServlet {
         String body = WSUtils.readInputStream(req.getInputStream());
         logger.debug("startApp==>" + body);
         Map<String, String> bodyObj = KJson.readStringValue(body);
-        String service_id = bodyObj.get("service_id");
-        String error = WSUtils.unModify(service_id);
-        if (error == null) error = WSUtils.unStart(service_id);
+        String app_id = bodyObj.get("app_id");
+        String error = WSUtils.unModify(null, app_id);
+        if (error == null) error = WSUtils.unStart(app_id);
         if (error == null) {
             MysqlOperator mysqlOperator = KsServer.getMysqlOperator();
-            Path taskFile = KsServer.app_dir.resolve(service_id).resolve("main.properties");
-            String[] commands = new String[]{KsServer.bin_dir.resolve("ks-app-start.sh").toString(), taskFile.toString(), "start"};
+            Path taskFile = KsServer.app_dir.resolve(app_id).resolve("main.properties");
+            String[] commands = new String[]{KsServer.bin_dir.resolve("ks-app.sh").toString(), taskFile.toString(), "start"};
             try {
                 Process process = Runtime.getRuntime().exec(commands, null, taskFile.getParent().toFile());
                 errorS = new ExportInputStream(process.getErrorStream(), logger,
-                        ExportInputStream.Level.ERROR, service_id);
+                        ExportInputStream.Level.ERROR, app_id);
                 errorS.start();
                 infoS = new ExportInputStream(process.getInputStream(), logger,
-                        ExportInputStream.Level.INFO, service_id);
+                        ExportInputStream.Level.INFO, app_id);
                 infoS.start();
                 int exitCode = process.waitFor();
                 if (exitCode == 0) {
-                    mysqlOperator.fixUpdate("update ksapp set service_status='run' where service_id=?",
-                            service_id);
-                    KsServer.caches.get(service_id).setStatus(AppInfo.Status.START);
+                    mysqlOperator.fixUpdate("update ksapp set app_status=4 where app_id=?",
+                            app_id);
+                    WSUtils.updateCacheStatus(app_id, AppInfo.Status.START);
                 } else {
                     error = "启动脚本退出异常,exit code:" + exitCode;
-                    mysqlOperator.fixUpdate("update ksapp set service_status='odd' where service_id=?",
-                            service_id);
-                    KsServer.caches.get(service_id).setStatus(AppInfo.Status.ODD);
+                    mysqlOperator.fixUpdate("update ksapp set app_status=3 where app_id=?",
+                            app_id);
+                    WSUtils.updateCacheStatus(app_id, AppInfo.Status.ODD);
                 }
             } catch (SQLException | InterruptedException e) {
                 error = "启动失败:" + e.getMessage();
-                logger.error(service_id, e.getMessage());
+                logger.error(app_id, e.getMessage());
             } finally {
                 if (errorS != null) errorS.interrupt();
                 if (infoS != null) infoS.interrupt();
@@ -120,7 +120,7 @@ public class StartApp extends HttpServlet {
         if (error == null) {
             outputStream.write("{\"success\":true}".getBytes("utf-8"));
         } else {
-            String msg = "{\"success\":true,\"error\":\"" + error + "\"}";
+            String msg = "{\"success\":false,\"error\":\"" + error + "\"}";
             outputStream.write(msg.getBytes("utf-8"));
         }
     }

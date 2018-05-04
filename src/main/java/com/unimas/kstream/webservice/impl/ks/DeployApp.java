@@ -3,6 +3,7 @@ package com.unimas.kstream.webservice.impl.ks;
 import com.unimas.kstream.KsServer;
 import com.unimas.kstream.bean.AppInfo;
 import com.unimas.kstream.bean.KJson;
+import com.unimas.kstream.bean.ServiceInfo;
 import com.unimas.kstream.webservice.MysqlOperator;
 import com.unimas.kstream.webservice.WSUtils;
 import org.slf4j.Logger;
@@ -83,28 +84,28 @@ public class DeployApp extends HttpServlet {
         String body = WSUtils.readInputStream(req.getInputStream());
         logger.debug("deployApp==>" + body);
         Map<String, String> bodyObj = KJson.readStringValue(body);
-        String service_id = bodyObj.get("service_id");
-        String error = WSUtils.unModify(service_id);
+        String app_id = bodyObj.get("app_id");
+        String error = WSUtils.unModify(null, app_id);
         if (error == null) {
-            Path dir = KsServer.app_dir.resolve(service_id);
+            Path dir = KsServer.app_dir.resolve(app_id);
             if (Files.notExists(dir, LinkOption.NOFOLLOW_LINKS)) Files.createDirectory(dir);
             MysqlOperator mysqlOperator = KsServer.getMysqlOperator();
             try {
                 StringBuilder input_ids = new StringBuilder();
                 List<Map<String, String>> main = mysqlOperator.query(
-                        "select service_name,main_json,operation_order from ksapp where service_id=?",
-                        service_id);
+                        "select app_name,main_json,operation_order from ksapp where app_id=?",
+                        app_id);
                 List<Map<String, String>> inputs = mysqlOperator.query(
-                        "select input_id,input_json from ksinput where service_id=?",
-                        service_id);
+                        "select input_id,input_json from ksinput where app_id=?",
+                        app_id);
                 List<Map<String, String>> operations = mysqlOperator.query(
-                        "select operation_id,operation_json from ksoperations where service_id=?",
-                        service_id);
+                        "select operation_id,operation_json from ksoperations where app_id=?",
+                        app_id);
                 List<Map<String, String>> output = mysqlOperator.query(
-                        "select output_json from ksoutput where service_id=?",
-                        service_id);
+                        "select output_json from ksoutput where app_id=?",
+                        app_id);
                 if (main.isEmpty() || inputs.isEmpty() || output.isEmpty()) {
-                    error = KsServer.caches.get(service_id).getName() + " input is empty";
+                    error = "任务数据源或输出为空,请配置后再部署";
                 } else {
                     for (Map<String, String> m : inputs) {
                         String _id = m.get("input_id");
@@ -120,12 +121,11 @@ public class DeployApp extends HttpServlet {
                     }
                     String ks_source = input_ids.substring(0, input_ids.length() - 1);
                     for (Map<String, String> m : main) {
-                        writeFile(dir.resolve("main.properties"), "main", m.get("main_json"), service_id,
-                                m.get("service_name"), ks_source, m.get("operation_order"));
+                        writeFile(dir.resolve("main.properties"), "main", m.get("main_json"), app_id,
+                                m.get("app_name"), ks_source, m.get("operation_order"));
                     }
-                    mysqlOperator.fixUpdate("update ksapp set service_status='stop' where service_id=?",
-                            service_id);
-                    KsServer.caches.get(service_id).setStatus(AppInfo.Status.STOP);
+                    mysqlOperator.fixUpdate("update ksapp set app_status=1 where app_id=?", app_id);
+                    WSUtils.updateCacheStatus(app_id, AppInfo.Status.STOP);
                 }
             } catch (SQLException e) {
                 error = "部署失败:" + e.getMessage();
@@ -136,12 +136,13 @@ public class DeployApp extends HttpServlet {
         if (error == null) {
             outputStream.write("{\"success\":true}".getBytes("utf-8"));
         } else {
-            String msg = "{\"success\":true,\"error\":\"" + error + "\"}";
+            String msg = "{\"success\":false,\"error\":\"" + error + "\"}";
             outputStream.write(msg.getBytes("utf-8"));
         }
     }
 
     //type,json,other...
+    @SuppressWarnings("unchecked")
     private void writeFile(Path path, String... param) throws IOException {
         Properties properties = new Properties();
         switch (param[0]) {
@@ -152,16 +153,32 @@ public class DeployApp extends HttpServlet {
                 properties.put("ks.source", param[4]);
                 properties.put("ks.operation", param[5]);
                 properties.put("ks.output", "output");
-                ma.forEach((k, v) -> properties.put(k.replaceAll("_", "."), v));
+                ma.forEach((k, v) -> properties.put(k.replaceAll("_", "."), v == null ? "" : v));
                 break;
             case "input":
                 Map<String, String> in = KJson.readStringValue(param[1]);
                 properties.put("ks.name", param[2]);
-                in.forEach((k, v) -> properties.put(k.replaceAll("_", "."), v));
+                in.forEach((k, v) -> properties.put(k.replaceAll("_", "."), v == null ? "" : v));
+                break;
+            case "output":
+                Map<String, Object> out = KJson.readValue(param[1]);
+                out.forEach((k, v) -> {
+                    String value;
+                    if (k.equals("output_targets")) {
+                        List<String> targets = (List<String>) v;
+                        StringBuilder builder = new StringBuilder();
+                        for (int i = 0; i < targets.size(); i++) {
+                            builder.append(targets.get(i));
+                            if (i != targets.size() - 1) builder.append(",");
+                        }
+                        value = builder.toString();
+                    } else value = v == null ? "" : String.valueOf(v);
+                    properties.put(k.replaceAll("_", "."), value == null ? "" : value);
+                });
                 break;
             default:
                 Map<String, String> m = KJson.readStringValue(param[1]);
-                m.forEach((k, v) -> properties.put(k.replaceAll("_", "."), v));
+                m.forEach((k, v) -> properties.put(k.replaceAll("_", "."), v == null ? "" : v));
                 break;
         }
         try (FileOutputStream output = new FileOutputStream(path.toFile())) {

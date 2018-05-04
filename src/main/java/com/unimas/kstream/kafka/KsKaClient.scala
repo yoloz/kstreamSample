@@ -21,7 +21,7 @@ class KsKaClient private(client: KafkaZkClient) {
 
   def getBrokersWithHost: util.List[String] = getBrokers.values.toList.asJava
 
-  private def getTopics: Seq[String] = client.getAllTopicsInCluster.filterNot(t => Topic.isInternal(t))
+  def getTopics: Seq[String] = client.getAllTopicsInCluster.filterNot(t => Topic.isInternal(t))
 
   def getBrokers: Map[Int, String] = {
     val brokers = client.getAllBrokersInCluster

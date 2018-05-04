@@ -1,8 +1,6 @@
 package com.unimas.kstream.bean;
 
 import org.jetbrains.annotations.NotNull;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.security.SecureRandom;
 import java.nio.ByteBuffer;
@@ -11,8 +9,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 
 public class ObjectId implements Comparable<ObjectId> {
-
-    private static final Logger logger = LoggerFactory.getLogger(ObjectId.class);
 
     private static final AtomicInteger NEXT_COUNTER = new AtomicInteger(new SecureRandom().nextInt());
 
@@ -28,13 +24,13 @@ public class ObjectId implements Comparable<ObjectId> {
     }
 
     private ObjectId() {
-        this.timestamp = (int) (new Date().getTime() / 1000);
+        this.timestamp = (int) (System.currentTimeMillis() / 1000);
         this.counter = NEXT_COUNTER.getAndIncrement() & 0x00ffffff;
     }
 
 
     /**
-     * Constructs a new instance from a 14-byte hexadecimal string representation.
+     * Constructs a new instance from a hexadecimal string representation.
      *
      * @param hexString the string to convert
      * @throws IllegalArgumentException if the string is not a valid hex string representation of an ObjectId
@@ -77,7 +73,7 @@ public class ObjectId implements Comparable<ObjectId> {
         return true;
     }
 
-    public Date getDate() {
+    public Date getCreateDate() {
         return new Date(timestamp * 1000L);
     }
 
@@ -136,7 +132,7 @@ public class ObjectId implements Comparable<ObjectId> {
         return buffer.array();  // using .allocate ensures there is a backing array that can be returned
     }
 
-    // Big-Endian helpers, in this class because all other BSON numbers are little-endian
+    // Big-Endian helpers
     private static int makeInt(final byte b3, final byte b2, final byte b1, final byte b0) {
         return (((b3) << 24) |
                 ((b2 & 0xff) << 16) |
@@ -145,29 +141,18 @@ public class ObjectId implements Comparable<ObjectId> {
     }
 
     private static byte int3(final int x) {
-        System.out.println(Integer.toBinaryString(x));
-        System.out.println(Integer.toBinaryString(x >> 24));
-        System.out.println((byte) (x >> 24));
         return (byte) (x >> 24);
     }
 
     private static byte int2(final int x) {
-        System.out.println(Integer.toBinaryString(x));
-        System.out.println(Integer.toBinaryString(x >> 16));
-        System.out.println((byte) (x >> 16));
         return (byte) (x >> 16);
     }
 
     private static byte int1(final int x) {
-        System.out.println(Integer.toBinaryString(x));
-        System.out.println(Integer.toBinaryString(x >> 8));
-        System.out.println((byte) (x >> 8));
         return (byte) (x >> 8);
     }
 
     private static byte int0(final int x) {
-        System.out.println(Integer.toBinaryString(x));
-        System.out.println((byte) (x));
         return (byte) (x);
     }
 

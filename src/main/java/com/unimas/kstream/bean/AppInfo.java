@@ -5,18 +5,26 @@ public class AppInfo {
 
     public enum Status {
         //运行,启动异常,停止,启动中,未部署(数据库数据未生成配置文件或配置文件不是最新数据)
-        RUN("run"), ODD("odd"), STOP("stop"), START("start"), INIT("init");
+        RUN("run", 4), ODD("odd", 3), STOP("stop", 1),
+        START("start", 2), INIT("init", 0);
         private String value;
+        private int type;
 
-        Status(String value) {
+        Status(String value, int type) {
             this.value = value;
+            this.type = type;
         }
 
         public String getValue() {
             return value;
         }
+
+        public int getType() {
+            return type;
+        }
     }
 
+    private String id = "";
     private String name = "";
     private String desc = "";
     private String pid = "";
@@ -24,7 +32,15 @@ public class AppInfo {
     private String cpu = "—";
     private String mem = "—";
     private String runtime = "—";
+    private String zkUrl = "";
 
+    public String getId() {
+        return id;
+    }
+
+    public void setId(String id) {
+        this.id = id;
+    }
 
     public String getName() {
         return name;
@@ -87,5 +103,13 @@ public class AppInfo {
 
     public void setRuntime(String runtime) {
         this.runtime = runtime;
+    }
+
+    public String getZkUrl() {
+        return zkUrl;
+    }
+
+    public void setZkUrl(String zkUrl) {
+        this.zkUrl = zkUrl;
     }
 }

@@ -11,6 +11,10 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.charset.Charset;
+import java.nio.file.Path;
+import java.nio.file.attribute.FileTime;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 
 /**
  * 后台每1分钟检查一次caches的运行状态是否正常及更新运行信息
@@ -34,32 +38,33 @@ public class RegularlyUpdate extends Thread {
     public void run() {
         while (!isInterrupted()) {
             final StringBuilder pidBuilder = new StringBuilder();
-            KsServer.caches.forEach((id, app) -> {
-                File pf = KsServer.app_dir.resolve(id).resolve("pid").toFile();
-                switch (app.getStatus()) {
-                    case RUN:
-                        if (!pf.exists()) {
-                            logger.warn(id + " status run but pid file is not exit,change status to stop");
-                            app.setStatus(AppInfo.Status.STOP);
-                            app.setPid("");
-                            app.setRuntime("—");
-                        } else app.setRuntime(WSUtils.getRunTime(id));
-                        break;
-                    default:
-                        if (pf.exists()) {
-                            logger.warn(id + " status " + app.getStatus().getValue() +
-                                    " but pid file is exit,change status to run");
-                            app.setStatus(AppInfo.Status.RUN);
-                            try {
-                                app.setPid(Files.readFirstLine(pf, Charset.forName("UTF-8")));
-                            } catch (IOException e) {
-                                logger.error("读取文件:" + pf.toString() + "失败", e);
-                            }
-                            app.setRuntime(WSUtils.getRunTime(id));
-                        } else app.setRuntime("—");
-                }
-                if (!app.getPid().isEmpty()) pidBuilder.append(app.getPid()).append(",");
-            });
+            KsServer.caches.values().forEach(s -> s.getAppInfoMap().forEach((id, app) -> {
+                        File pf = KsServer.app_dir.resolve(id).resolve("pid").toFile();
+                        switch (app.getStatus()) {
+                            case RUN:
+                                if (!pf.exists()) {
+                                    logger.warn(id + " status run but pid file is not exit,change status to stop");
+                                    app.setStatus(AppInfo.Status.STOP);
+                                    app.setPid("");
+                                    app.setRuntime("—");
+                                } else app.setRuntime(getRunTime(id));
+                                break;
+                            default:
+                                if (pf.exists()) {
+                                    logger.warn(id + " status " + app.getStatus().getValue() +
+                                            " but pid file is exit,change status to run");
+                                    app.setStatus(AppInfo.Status.RUN);
+                                    try {
+                                        app.setPid(Files.readFirstLine(pf, Charset.forName("UTF-8")));
+                                    } catch (IOException e) {
+                                        logger.error("读取文件:" + pf.toString() + "失败", e);
+                                    }
+                                    app.setRuntime(getRunTime(id));
+                                } else app.setRuntime("—");
+                        }
+                        if (!app.getPid().isEmpty()) pidBuilder.append(app.getPid()).append(",");
+                    }
+            ));
             this.updateSysInfo(pidBuilder.toString());
             try {
                 Thread.sleep(60 * 1000);
@@ -97,7 +102,7 @@ public class RegularlyUpdate extends Thread {
             String line;
             while ((line = buffR.readLine()) != null) {
                 String[] tops = line.split("\\s+");
-                KsServer.caches.forEach((k, app) -> {
+                KsServer.caches.values().forEach(s -> s.getAppInfoMap().forEach((k, app) -> {
                     if (app.getPid().equals(tops[0])) {
                         app.setCpu(tops[8]);
                         app.setMem(tops[9]);
@@ -105,7 +110,7 @@ public class RegularlyUpdate extends Thread {
                         app.setCpu(tops[9]);
                         app.setMem(tops[10]);
                     }
-                });
+                }));
             }
         } catch (IOException e) {
             logger.error("fail to get " + pids + " info", e);
@@ -114,6 +119,31 @@ public class RegularlyUpdate extends Thread {
                 if (buffR != null) buffR.close();
             } catch (IOException ignored) {
             }
+        }
+    }
+
+    private String getRunTime(String app_id) {
+        final int oneDaySec = 24 * 3600;
+        Path pf = KsServer.app_dir.resolve(app_id).resolve("pid");
+        if (!pf.toFile().exists()) return "—";
+        try {
+            FileTime fileTime = (FileTime) java.nio.file.Files.getAttribute(pf, "lastModifiedTime");
+            OffsetDateTime ft = OffsetDateTime.ofInstant(fileTime.toInstant(), ZoneOffset.systemDefault());
+            OffsetDateTime now = OffsetDateTime.now();
+            long differ = (now.toInstant().toEpochMilli() - ft.toInstant().toEpochMilli()) / 1000;
+            long day = differ / oneDaySec;
+            long hour = (differ - (day * oneDaySec)) / 3600;
+            long min = (differ - (day * oneDaySec) - (hour * 3600)) / 60;
+            long sec = differ - (day * oneDaySec) - (hour * 3600) - (min * 60);
+            StringBuilder builder = new StringBuilder();
+            if (day > 0) builder.append(day).append("d");
+            if (hour > 0) builder.append(hour).append("h");
+            if (min > 0) builder.append(min).append("m");
+            if (sec > 0) builder.append(sec).append("s");
+            if (builder.length() == 0) return "—";
+            else return builder.toString();
+        } catch (IOException e) {
+            return "—";
         }
     }
 }

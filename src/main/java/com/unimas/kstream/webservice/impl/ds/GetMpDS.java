@@ -1,9 +1,9 @@
-package com.unimas.kstream.webservice.impl.ks;
+package com.unimas.kstream.webservice.impl.ds;
 
 import com.google.gson.reflect.TypeToken;
 import com.unimas.kstream.KsServer;
-import com.unimas.kstream.bean.AppInfo;
 import com.unimas.kstream.bean.KJson;
+import com.unimas.kstream.webservice.MysqlOperator;
 import com.unimas.kstream.webservice.WSUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -15,14 +15,13 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.util.ArrayList;
-import java.util.HashMap;
+import java.sql.SQLException;
 import java.util.List;
 import java.util.Map;
 
-public class GetAllAppSys extends HttpServlet {
+public class GetMpDS extends HttpServlet {
 
-    private final Logger logger = LoggerFactory.getLogger(GetAllAppSys.class);
+    private final Logger logger = LoggerFactory.getLogger(GetMpDS.class);
 
     /**
      * Called by the server (via the <code>service</code> method)
@@ -75,27 +74,32 @@ public class GetAllAppSys extends HttpServlet {
      * @see ServletResponse#setContentType
      */
     @Override
-    protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws IOException {
+    protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws IOException {
         String body = WSUtils.readInputStream(req.getInputStream());
-        logger.debug("getAllAppSys==>" + body);
-        List<Map<String, String>> list = new ArrayList<>(KsServer.caches.size());
-        for (Map.Entry<String, AppInfo> entry : KsServer.caches.entrySet()) {
-            String id = entry.getKey();
-            AppInfo app = entry.getValue();
-            Map<String, String> map = new HashMap<>();
-            map.put("service_id", id);
-            map.put("service_name", app.getName());
-            map.put("service_desc", app.getDesc());
-            map.put("service_status", app.getStatus().getValue());
-            map.put("service_cpu", app.getCpu());
-            map.put("service_mem", app.getMem());
-            map.put("service_time", app.getRuntime());
-            list.add(map);
+        logger.debug("getMpDS==>" + body);
+        Map<String, String> bodyObj = KJson.readStringValue(body);
+        String ds_type = bodyObj.get("ds_type");
+        String error = null;
+        String result = "[]";
+        MysqlOperator mysqlOperator = KsServer.getMysqlOperator();
+        try {
+            List<Map<String, String>> dslist = mysqlOperator.query(
+                    "select ds_id,ds_name from ciisource where ds_type=?", ds_type);
+            result = KJson.writeValue(dslist,
+                    new TypeToken<List<Map<String, String>>>() {
+                    }.getType());
+        } catch (SQLException e) {
+            error = e.getMessage();
+            logger.error(error, e);
         }
         OutputStream outputStream = resp.getOutputStream();
-        String result = "{\"success\":true,\"results\":" + KJson.writeValue(list,
-                new TypeToken<List<Map<String, String>>>() {
-                }.getType()) + "}";
-        outputStream.write(result.getBytes("utf-8"));
+        String resultS;
+        if (error == null) {
+            resultS = "{\"success\":true,\"results\":" + result + "}";
+            outputStream.write(resultS.getBytes("utf-8"));
+        } else {
+            resultS = "{\"success\":false,\"error\":\"" + error + "\"}";
+            outputStream.write(resultS.getBytes("utf-8"));
+        }
     }
 }

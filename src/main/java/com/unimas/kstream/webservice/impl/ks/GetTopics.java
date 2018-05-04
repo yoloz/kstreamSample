@@ -1,12 +1,15 @@
 package com.unimas.kstream.webservice.impl.ks;
 
+import com.google.gson.reflect.TypeToken;
 import com.unimas.kstream.KsServer;
 import com.unimas.kstream.bean.AppInfo;
 import com.unimas.kstream.bean.KJson;
-import com.unimas.kstream.webservice.MysqlOperator;
+import com.unimas.kstream.bean.ServiceInfo;
+import com.unimas.kstream.kafka.KsKaClient;
 import com.unimas.kstream.webservice.WSUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import scala.collection.JavaConversions;
 
 import javax.servlet.ServletOutputStream;
 import javax.servlet.ServletResponse;
@@ -15,12 +18,12 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.sql.SQLException;
+import java.util.List;
 import java.util.Map;
 
-public class OrderApp extends HttpServlet {
+public class GetTopics extends HttpServlet {
 
-    private final Logger logger = LoggerFactory.getLogger(OrderApp.class);
+    private final Logger logger = LoggerFactory.getLogger(GetTopics.class);
 
     /**
      * Called by the server (via the <code>service</code> method)
@@ -75,30 +78,43 @@ public class OrderApp extends HttpServlet {
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws IOException {
         String body = WSUtils.readInputStream(req.getInputStream());
-        logger.debug("orderApp==>" + body);
+        logger.debug("getTopics==>" + body);
         Map<String, String> bodyObj = KJson.readStringValue(body);
         String app_id = bodyObj.get("app_id");
-        String operation_order = bodyObj.get("order");
-        String error = WSUtils.unModify(null, app_id);
-        if (error == null) {
-            MysqlOperator mysqlOperator = KsServer.getMysqlOperator();
-            String status = "update ksapp set app_status=0 where app_id='" + app_id + "'";
-            try {
-                mysqlOperator.update(status, null,
-                        "update ksapp set operation_order=? where app_id=?",
-                        operation_order, app_id);
-                WSUtils.updateCacheStatus(app_id, AppInfo.Status.INIT);
-            } catch (SQLException e) {
-                error = "顺序更新失败:" + e.getMessage();
-                logger.error(error, e);
+        String zkUrl = null;
+        String error = null;
+        for (ServiceInfo serviceInfo : KsServer.caches.values()) {
+            Map<String, AppInfo> appInfoMap = serviceInfo.getAppInfoMap();
+            if (appInfoMap.containsKey(app_id)) {
+                zkUrl = appInfoMap.get(app_id).getZkUrl();
+                break;
             }
         }
+        String results = "[]";
+        if (zkUrl != null) {
+            KsKaClient client = null;
+            try {
+                client = KsKaClient.apply(zkUrl);
+                List<String> topics = JavaConversions.seqAsJavaList(client.getTopics());
+                results = KJson.writeValue(topics,
+                        new TypeToken<List<String>>() {
+                        }.getType());
+
+            } catch (Throwable e) {
+                error = e.getMessage();
+                logger.error(error, e);
+            } finally {
+                if (client != null) client.close();
+            }
+        } else error = "未找到任务的zookeeper地址";
+
         OutputStream outputStream = resp.getOutputStream();
         if (error == null) {
-            outputStream.write("{\"success\":true}".getBytes("utf-8"));
+            String result = "{\"success\":true,\"results\":\"" + results + "\"}";
+            outputStream.write(result.getBytes("utf-8"));
         } else {
-            String msg = "{\"success\":false,\"error\":\"" + error + "\"}";
-            outputStream.write(msg.getBytes("utf-8"));
+            String result = "{\"success\":false,\"error\":\"" + error + "\"}";
+            outputStream.write(result.getBytes("utf-8"));
         }
     }
 }

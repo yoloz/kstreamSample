@@ -1,9 +1,9 @@
 package com.unimas.kstream.webservice.impl.ks;
 
+import com.google.gson.reflect.TypeToken;
 import com.unimas.kstream.KsServer;
 import com.unimas.kstream.bean.AppInfo;
 import com.unimas.kstream.bean.KJson;
-import com.unimas.kstream.webservice.MysqlOperator;
 import com.unimas.kstream.webservice.WSUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -15,12 +15,14 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
-public class OrderApp extends HttpServlet {
+public class GetAllApp extends HttpServlet {
 
-    private final Logger logger = LoggerFactory.getLogger(OrderApp.class);
+    private final Logger logger = LoggerFactory.getLogger(GetAllApp.class);
 
     /**
      * Called by the server (via the <code>service</code> method)
@@ -75,30 +77,26 @@ public class OrderApp extends HttpServlet {
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws IOException {
         String body = WSUtils.readInputStream(req.getInputStream());
-        logger.debug("orderApp==>" + body);
+        logger.debug("getAllApp==>" + body);
         Map<String, String> bodyObj = KJson.readStringValue(body);
-        String app_id = bodyObj.get("app_id");
-        String operation_order = bodyObj.get("order");
-        String error = WSUtils.unModify(null, app_id);
-        if (error == null) {
-            MysqlOperator mysqlOperator = KsServer.getMysqlOperator();
-            String status = "update ksapp set app_status=0 where app_id='" + app_id + "'";
-            try {
-                mysqlOperator.update(status, null,
-                        "update ksapp set operation_order=? where app_id=?",
-                        operation_order, app_id);
-                WSUtils.updateCacheStatus(app_id, AppInfo.Status.INIT);
-            } catch (SQLException e) {
-                error = "顺序更新失败:" + e.getMessage();
-                logger.error(error, e);
+        String service_id = bodyObj.get("service_id");
+        List<Map<String, String>> list = new ArrayList<>(5);
+        if (KsServer.caches.containsKey(service_id))
+            for (AppInfo appInfo : KsServer.caches.get(service_id).getAppInfoMap().values()) {
+                Map<String, String> map = new HashMap<>();
+                map.put("app_id", appInfo.getId());
+                map.put("app_name", appInfo.getName());
+                map.put("app_desc", appInfo.getDesc());
+                map.put("app_status", appInfo.getStatus().getValue());
+                map.put("app_cpu", appInfo.getCpu());
+                map.put("app_mem", appInfo.getMem());
+                map.put("app_time", appInfo.getRuntime());
+                list.add(map);
             }
-        }
         OutputStream outputStream = resp.getOutputStream();
-        if (error == null) {
-            outputStream.write("{\"success\":true}".getBytes("utf-8"));
-        } else {
-            String msg = "{\"success\":false,\"error\":\"" + error + "\"}";
-            outputStream.write(msg.getBytes("utf-8"));
-        }
+        String result = "{\"success\":true,\"results\":" + KJson.writeValue(list,
+                new TypeToken<List<Map<String, String>>>() {
+                }.getType()) + "}";
+        outputStream.write(result.getBytes("utf-8"));
     }
 }

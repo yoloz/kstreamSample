@@ -265,7 +265,7 @@ public class AppImpl extends Thread implements KUtils {
             }
             return Optional.of(p);
         } else {
-            logger.error(concat(" ", f.toString(), "does not exit..."));
+            logger.warn(concat(" ", f.toString(), "does not exit..."));
         }
         return Optional.absent();
     }

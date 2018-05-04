@@ -16,9 +16,9 @@ import java.io.OutputStream;
 import java.util.List;
 import java.util.Map;
 
-public class GetAllTopics extends HttpServlet {
+public class GetAllTopic extends HttpServlet {
 
-    private final Logger logger = LoggerFactory.getLogger(GetAllTopics.class);
+    private final Logger logger = LoggerFactory.getLogger(GetAllTopic.class);
 
     /**
      * Called by the server (via the <code>service</code> method) to
@@ -81,7 +81,7 @@ public class GetAllTopics extends HttpServlet {
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws IOException {
         String body = WSUtils.readInputStream(req.getInputStream());
-        logger.debug("getAllTopics==>" + body);
+        logger.debug("getAllTopic==>" + body);
         List<Map<String, String>> topics = null;
         String error = null;
         try {
@@ -97,7 +97,7 @@ public class GetAllTopics extends HttpServlet {
                     }.getType()) + "}";
             outputStream.write(result.getBytes("utf-8"));
         } else {
-            String result = "{\"success\":true,\"error\":\"" + error + "\"}";
+            String result = "{\"success\":false,\"error\":\"" + error + "\"}";
             outputStream.write(result.getBytes("utf-8"));
         }
     }

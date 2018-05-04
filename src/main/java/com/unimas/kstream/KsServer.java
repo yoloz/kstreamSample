@@ -2,23 +2,24 @@ package com.unimas.kstream;
 
 import com.google.common.collect.ImmutableList;
 import com.unimas.kstream.bean.AppInfo;
+import com.unimas.kstream.bean.ServiceInfo;
 import com.unimas.kstream.error.KRunException;
 import com.unimas.kstream.kafka.KaJMX;
 import com.unimas.kstream.kafka.KsKaClient;
 import com.unimas.kstream.webservice.RegularlyUpdate;
 import com.unimas.kstream.webservice.MysqlOperator;
-import com.unimas.kstream.webservice.impl.ka.GetAllTopics;
+import com.unimas.kstream.webservice.impl.ka.GetAllTopic;
 import com.unimas.kstream.webservice.impl.ka.GetTopic;
 import com.unimas.kstream.webservice.impl.ka.LogEndOffset;
 import com.unimas.kstream.webservice.impl.ks.DeleteApp;
 import com.unimas.kstream.webservice.impl.ks.DeployApp;
-import com.unimas.kstream.webservice.impl.ks.GetAllAppSys;
-import com.unimas.kstream.webservice.impl.ks.GetApp;
-import com.unimas.kstream.webservice.impl.ks.GetAppSys;
+import com.unimas.kstream.webservice.impl.ks.GetAllApp;
+import com.unimas.kstream.webservice.impl.ks.GetAppConf;
 import com.unimas.kstream.webservice.impl.ks.OrderApp;
 import com.unimas.kstream.webservice.impl.ks.StartApp;
 import com.unimas.kstream.webservice.impl.ks.StopApp;
 import com.unimas.kstream.webservice.impl.ks.StoreApp;
+import com.unimas.kstream.webservice.impl.ks.StoreService;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.servlet.ServletHandler;
 import org.eclipse.jetty.servlets.CrossOriginFilter;
@@ -28,6 +29,8 @@ import org.slf4j.LoggerFactory;
 import javax.servlet.DispatcherType;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.lang.management.ManagementFactory;
@@ -52,7 +55,7 @@ public class KsServer {
     private static final String root_dir = System.getProperty("ks.root.dir");
     public static final Path app_dir = Paths.get(root_dir, "app");
     public static final Path bin_dir = Paths.get(root_dir, "bin");
-    public static final ConcurrentHashMap<String, AppInfo> caches = new ConcurrentHashMap<>();
+    public static final ConcurrentHashMap<String, ServiceInfo> caches = new ConcurrentHashMap<>();
 
     private static MysqlOperator mysqlOperator = null;
     private static KaJMX kaJMX = null;
@@ -86,16 +89,16 @@ public class KsServer {
     private void start() throws Exception {
         this.server = new Server(port);
         ServletHandler servletHandler = new ServletHandler();
+        servletHandler.addServletWithMapping(StoreService.class, "/cii/ks/storeService");
         servletHandler.addServletWithMapping(OrderApp.class, "/cii/ks/orderApp");
         servletHandler.addServletWithMapping(StoreApp.class, "/cii/ks/storeApp");
         servletHandler.addServletWithMapping(DeleteApp.class, "/cii/ks/deleteApp");
         servletHandler.addServletWithMapping(DeployApp.class, "/cii/ks/deployApp");
         servletHandler.addServletWithMapping(StartApp.class, "/cii/ks/startApp");
         servletHandler.addServletWithMapping(StopApp.class, "/cii/ks/stopApp");
-        servletHandler.addServletWithMapping(GetApp.class, "/cii/ks/getApp");
-        servletHandler.addServletWithMapping(GetAppSys.class, "/cii/ks/getAppSys");
-        servletHandler.addServletWithMapping(GetAllAppSys.class, "/cii/ks/getAllAppSys");
-        servletHandler.addServletWithMapping(GetAllTopics.class, "/cii/ka/getAllTopics");
+        servletHandler.addServletWithMapping(GetAppConf.class, "/cii/ks/getApp");
+        servletHandler.addServletWithMapping(GetAllApp.class, "/cii/ks/getAllAppSys");
+        servletHandler.addServletWithMapping(GetAllTopic.class, "/cii/ka/getAllTopics");
         servletHandler.addServletWithMapping(GetTopic.class, "/cii/ka/getTopic");
         servletHandler.addServletWithMapping(LogEndOffset.class, "/cii/ka/logEndOffset");
         servletHandler.addFilterWithMapping(CrossOriginFilter.class, "/cii/*", EnumSet.of(DispatcherType.REQUEST));
@@ -116,25 +119,37 @@ public class KsServer {
      */
     private void initApp() throws SQLException, IOException {
         List<Map<String, String>> list = mysqlOperator.query(
-                "select service_id,service_name,service_desc,service_status from ksapp");
-        for (Map<String, String> map : list) {
-            String service_id = map.get("service_id");
-            String service_name = map.get("service_name");
-            AppInfo appInfo = new AppInfo();
-            appInfo.setName(service_name);
-            appInfo.setDesc(map.get("service_desc"));
-            appInfo.setStatus(map.get("service_status"));
-            if (appInfo.getStatus() == AppInfo.Status.RUN) {
-                File pf = app_dir.resolve(service_id).resolve("pid").toFile();
-                if (pf.exists()) {
-                    String pid = com.google.common.io.Files.readFirstLine(pf, Charset.forName("UTF-8"));
-                    appInfo.setPid(pid);
-                } else {
-                    logger.warn("服务 " + service_name + " pid 文件丢失,状态重置为stop");
-                    appInfo.setStatus(AppInfo.Status.STOP);
+                "select service_id,service_name,service_desc from ksservice");
+        for (Map<String, String> services : list) {
+            ServiceInfo serviceInfo = new ServiceInfo();
+            String service_id = services.get("service_id");
+            List<Map<String, String>> applist = mysqlOperator.query(
+                    "select app_id,app_name,app_desc,app_status,zk_url from ksapp where service_id=?",
+                    service_id);
+            serviceInfo.setName(services.get("service_name"));
+            serviceInfo.setDesc(services.get("service_desc"));
+            for (Map<String, String> apps : applist) {
+                AppInfo appInfo = new AppInfo();
+                String app_id = apps.get("app_id");
+                appInfo.setId(app_id);
+                String app_name = apps.get("app_name");
+                appInfo.setName(app_name);
+                appInfo.setDesc(apps.get("app_desc"));
+                appInfo.setStatus(apps.get("app_status"));
+                appInfo.setZkUrl(apps.get("zk_url"));
+                if (appInfo.getStatus() == AppInfo.Status.RUN) {
+                    File pf = app_dir.resolve(app_id).resolve("pid").toFile();
+                    if (pf.exists()) {
+                        String pid = com.google.common.io.Files.readFirstLine(pf, Charset.forName("UTF-8"));
+                        appInfo.setPid(pid);
+                    } else {
+                        logger.warn("任务 " + app_name + " pid 文件丢失,状态重置为stop");
+                        appInfo.setStatus(AppInfo.Status.STOP);
+                    }
                 }
+                serviceInfo.addAppInfo(appInfo);
             }
-            caches.put(service_id, appInfo);
+            caches.put(service_id, serviceInfo);
         }
     }
 
@@ -188,16 +203,42 @@ public class KsServer {
     //**************************************
     //======================================
     public static MysqlOperator getMysqlOperator() {
-        if (mysqlOperator == null) throw new KRunException("mysql operator is null...");
+        if (mysqlOperator == null) throw new KRunException("数据库连接为空");
         return mysqlOperator;
     }
 
     public static KaJMX getKaJMX() {
+        if (kaJMX == null) throw new KRunException("JMX连接为空");
         return kaJMX;
     }
 
 
     public static KsKaClient getKsKaClient() {
+        if (ksKaClient == null) throw new KRunException("ZK连接为空");
         return ksKaClient;
+    }
+
+    public static void setKaJMX(String url) throws IOException {
+        kaJMX = new KaJMX(url);
+    }
+
+    public static void setKsKaClient(String url) {
+        ksKaClient = KsKaClient.apply(url);
+    }
+
+    public static void overWrite(String zkUrl, String jmxUrl) throws IOException {
+        Path cf = Paths.get(root_dir, "config", "server.properties");
+        if (cf.toFile().exists()) {
+            Properties p = new Properties();
+            try (InputStreamReader reader = new InputStreamReader(
+                    new FileInputStream(cf.toFile()), Charset.forName("UTF-8"))) {
+                p.load(reader);
+            }
+            p.put("zk.url", zkUrl);
+            p.put("jmx.url", jmxUrl);
+            try (FileOutputStream output = new FileOutputStream(cf.toFile())) {
+                p.store(output, null);
+            }
+        }
     }
 }

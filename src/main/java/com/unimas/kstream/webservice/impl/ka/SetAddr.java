@@ -1,9 +1,7 @@
-package com.unimas.kstream.webservice.impl.ks;
+package com.unimas.kstream.webservice.impl.ka;
 
 import com.unimas.kstream.KsServer;
-import com.unimas.kstream.bean.AppInfo;
 import com.unimas.kstream.bean.KJson;
-import com.unimas.kstream.webservice.MysqlOperator;
 import com.unimas.kstream.webservice.WSUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -15,12 +13,11 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.sql.SQLException;
 import java.util.Map;
 
-public class OrderApp extends HttpServlet {
+public class SetAddr extends HttpServlet {
 
-    private final Logger logger = LoggerFactory.getLogger(OrderApp.class);
+    private final Logger logger = LoggerFactory.getLogger(SetAddr.class);
 
     /**
      * Called by the server (via the <code>service</code> method)
@@ -75,30 +72,26 @@ public class OrderApp extends HttpServlet {
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws IOException {
         String body = WSUtils.readInputStream(req.getInputStream());
-        logger.debug("orderApp==>" + body);
+        logger.debug("setAddr==>" + body);
         Map<String, String> bodyObj = KJson.readStringValue(body);
-        String app_id = bodyObj.get("app_id");
-        String operation_order = bodyObj.get("order");
-        String error = WSUtils.unModify(null, app_id);
-        if (error == null) {
-            MysqlOperator mysqlOperator = KsServer.getMysqlOperator();
-            String status = "update ksapp set app_status=0 where app_id='" + app_id + "'";
-            try {
-                mysqlOperator.update(status, null,
-                        "update ksapp set operation_order=? where app_id=?",
-                        operation_order, app_id);
-                WSUtils.updateCacheStatus(app_id, AppInfo.Status.INIT);
-            } catch (SQLException e) {
-                error = "顺序更新失败:" + e.getMessage();
-                logger.error(error, e);
-            }
+        String zkUrl = bodyObj.get("zk_url");
+        String jmxUrl = bodyObj.get("jmx_url");
+        String error = null;
+        try {
+            if (jmxUrl != null && !jmxUrl.isEmpty()) KsServer.setKaJMX(jmxUrl);
+            if (zkUrl != null && !zkUrl.isEmpty()) KsServer.setKsKaClient(zkUrl);
+            KsServer.overWrite(zkUrl, jmxUrl);
+        } catch (Throwable e) {
+            error = e.getMessage();
+            logger.error(error, e);
         }
         OutputStream outputStream = resp.getOutputStream();
+        String result;
         if (error == null) {
             outputStream.write("{\"success\":true}".getBytes("utf-8"));
         } else {
-            String msg = "{\"success\":false,\"error\":\"" + error + "\"}";
-            outputStream.write(msg.getBytes("utf-8"));
+            result = "{\"success\":false,\"error\":\"" + error + "\"}";
+            outputStream.write(result.getBytes("utf-8"));
         }
     }
 }

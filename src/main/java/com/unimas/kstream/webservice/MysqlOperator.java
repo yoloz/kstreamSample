@@ -45,28 +45,28 @@ public class MysqlOperator implements KUtils {
         String url = nonNullEmpty(properties, "db.url");
         String user = nonNullEmpty(properties, "db.user");
         String pwd = nonNullEmpty(properties, "db.pwd");
-        String _initialSize = properties.getProperty("db.pool.initialSize");
+        String _initialSize = properties.getProperty("db.pool.initialSize", "1");
         int initialSize;
         try {
             initialSize = Integer.parseInt(_initialSize);
         } catch (NumberFormatException e) {
             initialSize = 1;
         }
-        String _maxTotal = properties.getProperty("db.pool.maxTotal");
+        String _maxTotal = properties.getProperty("db.pool.maxTotal", "4");
         int maxTotal;
         try {
             maxTotal = Integer.parseInt(_maxTotal);
         } catch (NumberFormatException e) {
             maxTotal = 4;
         }
-        String _maxIdle = properties.getProperty("db.pool.maxIdle");
+        String _maxIdle = properties.getProperty("db.pool.maxIdle", "4");
         int maxIdle;
         try {
             maxIdle = Integer.parseInt(_maxIdle);
         } catch (NumberFormatException e) {
             maxIdle = 4;
         }
-        String _minIdle = properties.getProperty("db.pool.minIdle");
+        String _minIdle = properties.getProperty("db.pool.minIdle", "0");
         int minIdle;
         try {
             minIdle = Integer.parseInt(_minIdle);
@@ -168,6 +168,20 @@ public class MysqlOperator implements KUtils {
             rs.close();
         }
         return list;
+    }
+
+    public boolean exist(String sql, Object... param) throws SQLException {
+        boolean result;
+        try (Connection conn = dataSource.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            for (int i = 0; i < param.length; i++) {
+                ps.setObject(i + 1, param[i]);
+            }
+            ResultSet rs = ps.executeQuery();
+            result = rs.next();
+            rs.close();
+        }
+        return result;
     }
 
     public void close() {

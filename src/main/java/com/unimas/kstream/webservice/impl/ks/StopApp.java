@@ -4,6 +4,7 @@ import com.unimas.kstream.KsServer;
 import com.unimas.kstream.StopProcess;
 import com.unimas.kstream.bean.AppInfo;
 import com.unimas.kstream.bean.KJson;
+import com.unimas.kstream.bean.ServiceInfo;
 import com.unimas.kstream.webservice.WSUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -77,26 +78,34 @@ public class StopApp extends HttpServlet {
         String body = WSUtils.readInputStream(req.getInputStream());
         logger.debug("stopApp==>" + body);
         Map<String, String> bodyObj = KJson.readStringValue(body);
-        String service_id = bodyObj.get("service_id");
-        AppInfo app = KsServer.caches.get(service_id);
+        String app_id = bodyObj.get("app_id");
+        AppInfo app = null;
+        for (ServiceInfo serviceInfo : KsServer.caches.values()) {
+            Map<String, AppInfo> appInfoMap = serviceInfo.getAppInfoMap();
+            if (appInfoMap.containsKey(app_id)) {
+                app = appInfoMap.get(app_id);
+                break;
+            }
+        }
         String error = null;
-        try {
+        if (app != null) try {
             if (app.getStatus() == AppInfo.Status.START || app.getStatus() == AppInfo.Status.RUN) {
-                KsServer.getMysqlOperator().fixUpdate("update ksapp set service_status='stop' where service_id=?",
-                        service_id);
+                KsServer.getMysqlOperator().fixUpdate("update ksapp set app_status=1 where app_id=?",
+                        app_id);
                 app.setStatus(AppInfo.Status.STOP);
                 app.setPid("");
-                StopProcess.stop(KsServer.app_dir.resolve(service_id).resolve("pid"));
+                StopProcess.stop(KsServer.app_dir.resolve(app_id).resolve("pid"));
             } else error = app.getName() + " 未运行或启动,无需停止!";
         } catch (SQLException e) {
             error = "停止失败:" + e.getMessage();
-            logger.error(service_id, e.getMessage());
+            logger.error(app_id, e.getMessage());
         }
+        else error = "任务内存中不存在";
         OutputStream outputStream = resp.getOutputStream();
         if (error == null) {
             outputStream.write("{\"success\":true}".getBytes("utf-8"));
         } else {
-            String msg = "{\"success\":true,\"error\":\"" + error + "\"}";
+            String msg = "{\"success\":false,\"error\":\"" + error + "\"}";
             outputStream.write(msg.getBytes("utf-8"));
         }
     }

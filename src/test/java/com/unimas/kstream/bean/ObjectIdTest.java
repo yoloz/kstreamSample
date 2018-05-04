@@ -4,9 +4,8 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-import java.nio.ByteBuffer;
 
-import static org.junit.Assert.*;
+//import static org.junit.Assert.*;
 
 public class ObjectIdTest {
 
@@ -20,15 +19,18 @@ public class ObjectIdTest {
 
     @Test
     public void get() {
-        ObjectId id = ObjectId.get();
-        System.out.println(id.toString());
-        System.out.println(id.getDate());
+        ObjectId objectId = ObjectId.get();
+        String id = objectId.toString();
+        System.out.println(id);
+        System.out.println(new ObjectId(id).equals(objectId));
     }
 
     @Test
     public void compareTo() {
         String bin = "01011010";
-        System.out.println(Integer.parseInt(bin,2));
+        int count = Integer.parseInt(bin, 2);
+        System.out.println(count);
+        System.out.println(Integer.numberOfLeadingZeros(count));
 
     }
 }

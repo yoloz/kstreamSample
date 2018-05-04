@@ -1,8 +1,8 @@
-package com.unimas.kstream.webservice.impl.ks;
+package com.unimas.kstream.webservice.impl.ds;
 
 import com.unimas.kstream.KsServer;
-import com.unimas.kstream.bean.AppInfo;
 import com.unimas.kstream.bean.KJson;
+import com.unimas.kstream.bean.ObjectId;
 import com.unimas.kstream.webservice.MysqlOperator;
 import com.unimas.kstream.webservice.WSUtils;
 import org.slf4j.Logger;
@@ -18,9 +18,9 @@ import java.io.OutputStream;
 import java.sql.SQLException;
 import java.util.Map;
 
-public class OrderApp extends HttpServlet {
+public class StoreSource extends HttpServlet {
 
-    private final Logger logger = LoggerFactory.getLogger(OrderApp.class);
+    private final Logger logger = LoggerFactory.getLogger(StoreSource.class);
 
     /**
      * Called by the server (via the <code>service</code> method)
@@ -73,32 +73,40 @@ public class OrderApp extends HttpServlet {
      * @see ServletResponse#setContentType
      */
     @Override
+    @SuppressWarnings("unchecked")
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws IOException {
         String body = WSUtils.readInputStream(req.getInputStream());
-        logger.debug("orderApp==>" + body);
-        Map<String, String> bodyObj = KJson.readStringValue(body);
-        String app_id = bodyObj.get("app_id");
-        String operation_order = bodyObj.get("order");
-        String error = WSUtils.unModify(null, app_id);
-        if (error == null) {
-            MysqlOperator mysqlOperator = KsServer.getMysqlOperator();
-            String status = "update ksapp set app_status=0 where app_id='" + app_id + "'";
-            try {
-                mysqlOperator.update(status, null,
-                        "update ksapp set operation_order=? where app_id=?",
-                        operation_order, app_id);
-                WSUtils.updateCacheStatus(app_id, AppInfo.Status.INIT);
-            } catch (SQLException e) {
-                error = "顺序更新失败:" + e.getMessage();
-                logger.error(error, e);
+        logger.debug("storeSource==>" + body);
+        Map<String, Object> bodyObj = KJson.readValue(body);
+        String ds_id = (String) bodyObj.get("ds_id");
+        String ds_name = (String) bodyObj.get("ds_tname");
+        String ds_type = (String) bodyObj.get("ds_type");
+        Map<String, Object> ds_json = (Map<String, Object>) bodyObj.get("ds_json");
+        String error = null;
+        MysqlOperator mysqlOperator = KsServer.getMysqlOperator();
+        try {
+            if (ds_id == null || ds_id.isEmpty()) {
+                ds_id = ObjectId.get().toString();
+                mysqlOperator.fixUpdate(
+                        "insert into ciisource(ds_id,ds_name,ds_type,ds_json)values(?,?,?,?)",
+                        ds_id, ds_name, ds_type, KJson.writeValueAsString(ds_json));
+            } else {
+                mysqlOperator.update(null, null,
+                        "update ciisource set ds_name=?,ds_type=?,ds_json=? where ds_id=?",
+                        ds_name, ds_type, KJson.writeValueAsString(ds_json), ds_id);
             }
+        } catch (SQLException e) {
+            error = "保存失败:" + e.getMessage();
+            logger.error(error, e);
         }
         OutputStream outputStream = resp.getOutputStream();
+        String result;
         if (error == null) {
-            outputStream.write("{\"success\":true}".getBytes("utf-8"));
+            result = "{\"success\":true,\"ds_id\":\"" + ds_id + "\"}";
+            outputStream.write(result.getBytes("utf-8"));
         } else {
-            String msg = "{\"success\":false,\"error\":\"" + error + "\"}";
-            outputStream.write(msg.getBytes("utf-8"));
+            result = "{\"success\":false,\"error\":\"" + error + "\"}";
+            outputStream.write(result.getBytes("utf-8"));
         }
     }
 }

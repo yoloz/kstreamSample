@@ -1,7 +1,10 @@
 package com.unimas.kstream.webservice.impl.ks;
 
 import com.unimas.kstream.KsServer;
+import com.unimas.kstream.bean.AppInfo;
 import com.unimas.kstream.bean.KJson;
+import com.unimas.kstream.bean.ObjectId;
+import com.unimas.kstream.bean.ServiceInfo;
 import com.unimas.kstream.webservice.MysqlOperator;
 import com.unimas.kstream.webservice.WSUtils;
 import org.slf4j.Logger;
@@ -83,109 +86,143 @@ public class StoreApp extends HttpServlet {
         String body = WSUtils.readInputStream(req.getInputStream());
         logger.debug("storeApp==>" + body);
         Map<String, Object> bodyObj = KJson.readValue(body);
-        String service_id = (String)bodyObj.get("service_id");
+        String id = (String) bodyObj.get("id");
         String type = String.valueOf(bodyObj.get("type"));
         Map<String, Object> value = (Map<String, Object>) bodyObj.get("value");
-        String error = WSUtils.unModify(service_id);
-        String id = null;
-        if (error == null) {
-            try {
-                switch (type) {
-                    case "main":
-                        id = storeMain(service_id, value);
-                        break;
-                    case "input":
-                        id = storeInput(service_id, value);
-                        break;
-                    case "operation":
-                        id = storeOperation(service_id, value);
-                        break;
-                    case "output":
-                        storeOutput(service_id, value);
-                        break;
-                    default:
-                        error = "storeApp=>type:" + type + " 不支持";
-                }
-            } catch (SQLException e) {
-                error = "保存失败:" + e.getMessage();
-                logger.error(error, e);
+        String error = null;
+        String re_id = null;
+        try {
+            switch (type) {
+                case "main":
+                    re_id = storeMain(id, value);
+                    break;
+                case "input":
+                    re_id = storeInput(id, value);
+                    break;
+                case "operation":
+                    re_id = storeOperation(id, value);
+                    break;
+                case "output":
+                    storeOutput(id, value);
+                    break;
+                default:
+                    error = "storeApp=>type:" + type + " 不支持";
             }
+        } catch (SQLException | IOException e) {
+            error = "保存失败:" + e.getMessage();
+            logger.error(error, e);
         }
         OutputStream outputStream = resp.getOutputStream();
         String result;
         if (error == null) {
-            if (id == null) result = "{\"success\":true}";
-            else result = "{\"success\":true,\"id\":\"" + id + "\"}";
+            if (re_id == null) result = "{\"success\":true}";
+            else result = "{\"success\":true,\"id\":\"" + re_id + "\"}";
             outputStream.write(result.getBytes("utf-8"));
         } else {
-            result = "{\"success\":true,\"error\":\"" + error + "\"}";
+            result = "{\"success\":false,\"error\":\"" + error + "\"}";
             outputStream.write(result.getBytes("utf-8"));
         }
     }
 
 
     private String storeMain(String service_id, Map<String, Object> value) throws IOException, SQLException {
-        MysqlOperator mysqlOperator = KsServer.getMysqlOperator();
-        String service_name = String.valueOf(value.remove("service_name"));
-        String service_desc = String.valueOf(value.remove("service_desc"));
-        if (service_id == null || service_id.isEmpty()) {
-            service_id = WSUtils.getUid();
-            mysqlOperator.fixUpdate(
-                    "insert into ksapp(service_id,service_name,service_desc,main_json)values(?,?,?,?)",
-                    service_id, service_name, service_desc, KJson.writeValueAsString(value));
-        } else {
-            String status = "update ksapp set service_status='init' where service_id='" + service_id + "'";
-            mysqlOperator.update(status, null,
-                    "update ksapp set service_name=?,service_desc=?,main_json=? where service_id=?",
-                    service_name, service_desc, KJson.writeValueAsString(value), service_id);
-        }
-        WSUtils.initCacheStatus(service_id, service_name, service_desc);
-        return service_id;
+        String app_id = (String) value.remove("app_id");
+        String app_name = (String) value.remove("app_name");
+        String app_desc = (String) value.remove("app_desc");
+        String ds_id = (String) value.remove("ds_id");
+        String error = (app_id == null || app_id.isEmpty()) ? WSUtils.unModify(service_id)
+                : WSUtils.unModify(service_id, app_id);
+        if (error == null) {
+            MysqlOperator mysqlOperator = KsServer.getMysqlOperator();
+            Map<String, String> dsm = mysqlOperator.query("select ds_name,ds_json from ciisource where ds_id=?",
+                    ds_id).get(0);
+            String ds_name = dsm.get("ds_name");
+            String ds_json = dsm.get("ds_json");
+            Map<String, String> ka_source = KJson.readStringValue(ds_json);
+            String zk_url = ka_source.get("zk_url");
+            value.put("bootstrap_servers", ka_source.get("kafka_url"));
+            value.put("ks_zookeeper_url", zk_url);
+            if (app_id == null || app_id.isEmpty()) {
+                app_id = ObjectId.get().toString();
+                mysqlOperator.fixUpdate(
+                        "insert into ksapp(service_id,app_id,app_name,app_desc,main_json,zk_url,ds_id,ds_name)" +
+                                "values(?,?,?,?,?,?,?,?)",
+                        service_id, app_id, app_name, app_desc, KJson.writeValueAsString(value), zk_url, ds_id, ds_name);
+            } else {
+                String status = "update ksapp set app_status=0 where app_id='" + app_id + "'";
+                mysqlOperator.update(status, null,
+                        "update ksapp set app_name=?,app_desc=?,main_json=?,zk_url=?,ds_id=?,ds_name=? where app_id=?",
+                        app_name, app_desc, KJson.writeValueAsString(value), zk_url, ds_id, ds_name, app_id);
+            }
+            ServiceInfo serviceInfo = KsServer.caches.get(service_id);
+            Map<String, AppInfo> appInfoMap = serviceInfo.getAppInfoMap();
+            AppInfo appInfo;
+            if (appInfoMap == null || !appInfoMap.containsKey(app_id)) {
+                appInfo = new AppInfo();
+                serviceInfo.addAppInfo(appInfo);
+            }
+            appInfo = serviceInfo.getAppInfoMap().get(app_id);
+            appInfo.setId(app_id);
+            appInfo.setName(app_name);
+            appInfo.setDesc(app_desc);
+            appInfo.setZkUrl(zk_url);
+            appInfo.setStatus(AppInfo.Status.INIT);
+            return app_id;
+        } else throw new IOException(error);
     }
 
-    private String storeInput(String service_id, Map<String, Object> value) throws IOException, SQLException {
-        MysqlOperator mysqlOperator = KsServer.getMysqlOperator();
-        String status = "update ksapp set service_status='init' where service_id='" + service_id + "'";
-        String input_id = String.valueOf(value.remove("input_id"));
-        if (input_id == null || input_id.isEmpty()) {
-            input_id = System.currentTimeMillis() + "";
-            mysqlOperator.update(status, null,
-                    "insert into ksinput(service_id,input_id,input_json)values(?,?,?)",
-                    service_id, input_id, KJson.writeValueAsString(value));
-        } else {
-            mysqlOperator.update(status, null,
-                    "update ksinput set input_json=? where service_id=? and input_id=?",
-                    KJson.writeValueAsString(value), service_id, input_id);
-        }
-        WSUtils.initCacheStatus(service_id);
-        return input_id;
+    private String storeInput(String app_id, Map<String, Object> value) throws IOException, SQLException {
+        String error = WSUtils.unModify(null, app_id);
+        if (error == null) {
+            MysqlOperator mysqlOperator = KsServer.getMysqlOperator();
+            String status = "update ksapp set app_status=0 where app_id='" + app_id + "'";
+            String input_id = (String) value.remove("input_id");
+            if (input_id == null || input_id.isEmpty()) {
+                input_id = ObjectId.get().toString();
+                mysqlOperator.update(status, null,
+                        "insert into ksinput(app_id,input_id,input_json)values(?,?,?)",
+                        app_id, input_id, KJson.writeValueAsString(value));
+            } else {
+                mysqlOperator.update(status, null,
+                        "update ksinput set input_json=? where app_id=? and input_id=?",
+                        KJson.writeValueAsString(value), app_id, input_id);
+            }
+            WSUtils.updateCacheStatus(app_id, AppInfo.Status.INIT);
+            return input_id;
+        } else throw new IOException(error);
     }
 
-    private String storeOperation(String service_id, Map<String, Object> value) throws IOException, SQLException {
-        MysqlOperator mysqlOperator = KsServer.getMysqlOperator();
-        String status = "update ksapp set service_status='init' where service_id='" + service_id + "'";
-        String operation_id = String.valueOf(value.remove("operation_id"));
-        if (operation_id == null || operation_id.isEmpty()) {
-            operation_id = System.currentTimeMillis() + "";
-            mysqlOperator.update(status, null,
-                    "insert into ksoperations(service_id,operation_id,operation_json)values(?,?,?)",
-                    service_id, operation_id, KJson.writeValueAsString(value));
-        } else {
-            mysqlOperator.update(status, null,
-                    "update ksoperations set operation_json=? where service_id=? and operation_id=?",
-                    KJson.writeValueAsString(value), service_id, operation_id);
-        }
-        WSUtils.initCacheStatus(service_id);
-        return operation_id;
+    private String storeOperation(String app_id, Map<String, Object> value) throws IOException, SQLException {
+        String error = WSUtils.unModify(null, app_id);
+        if (error == null) {
+            MysqlOperator mysqlOperator = KsServer.getMysqlOperator();
+            String status = "update ksapp set app_status=0 where app_id='" + app_id + "'";
+            String operation_id = (String) value.remove("operation_id");
+            if (operation_id == null || operation_id.isEmpty()) {
+                operation_id = ObjectId.get().toString();
+                mysqlOperator.update(status, null,
+                        "insert into ksoperations(app_id,operation_id,operation_json)values(?,?,?)",
+                        app_id, operation_id, KJson.writeValueAsString(value));
+            } else {
+                mysqlOperator.update(status, null,
+                        "update ksoperations set operation_json=? where app_id=? and operation_id=?",
+                        KJson.writeValueAsString(value), app_id, operation_id);
+            }
+            WSUtils.updateCacheStatus(app_id, AppInfo.Status.INIT);
+            return operation_id;
+        } else throw new IOException(error);
     }
 
-    private void storeOutput(String service_id, Map<String, Object> value) throws IOException, SQLException {
-        MysqlOperator mysqlOperator = KsServer.getMysqlOperator();
-        String status = "update ksapp set service_status='init' where service_id='" + service_id + "'";
-        String delete = "delete from ksoutput where service_id='" + service_id + "'";
-        mysqlOperator.update(status, delete,
-                "insert into ksoutput(service_id,output_json)values(?,?)",
-                service_id, KJson.writeValueAsString(value));
-        WSUtils.initCacheStatus(service_id);
+    private void storeOutput(String app_id, Map<String, Object> value) throws IOException, SQLException {
+        String error = WSUtils.unModify(null, app_id);
+        if (error == null) {
+            MysqlOperator mysqlOperator = KsServer.getMysqlOperator();
+            String status = "update ksapp set app_status=0 where app_id='" + app_id + "'";
+            String delete = "delete from ksoutput where app_id='" + app_id + "'";
+            mysqlOperator.update(status, delete,
+                    "insert into ksoutput(app_id,output_json)values(?,?)",
+                    app_id, KJson.writeValueAsString(value));
+            WSUtils.updateCacheStatus(app_id, AppInfo.Status.INIT);
+        } else throw new IOException(error);
     }
 }

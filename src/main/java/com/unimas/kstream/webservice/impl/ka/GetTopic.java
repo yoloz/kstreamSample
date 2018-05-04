@@ -92,7 +92,7 @@ public class GetTopic extends HttpServlet {
                     }.getType()) + "}";
             outputStream.write(result.getBytes("utf-8"));
         } else {
-            String result = "{\"success\":true,\"error\":\"" + error + "\"}";
+            String result = "{\"success\":false,\"error\":\"" + error + "\"}";
             outputStream.write(result.getBytes("utf-8"));
         }
     }
