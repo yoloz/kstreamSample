@@ -97,6 +97,16 @@ public class KsServerTest {
         }
     }
 
+    @Test
+    public void getAppConf() throws IOException {
+        String param = "{\"id\":\"5af007ccd676d5\",\"type\":\"operation\"}";
+        HttpPost httpPost = new HttpPost("http://10.68.13.120:12583/cii/ks/getAppConf");
+        httpPost.setEntity(new StringEntity(param, Charset.forName("utf-8")));
+        try (CloseableHttpResponse response = httpClient.execute(httpPost)) {
+            outPutResult(response);
+        }
+    }
+
     private void outPutResult(CloseableHttpResponse response) throws IOException {
         StatusLine statusLine = response.getStatusLine();
         if (response.getStatusLine().getStatusCode() == 200) {
@@ -104,4 +114,6 @@ public class KsServerTest {
             if (resEntity != null) System.out.println(EntityUtils.toString(resEntity));
         } else System.out.println(statusLine);
     }
+
+
 }

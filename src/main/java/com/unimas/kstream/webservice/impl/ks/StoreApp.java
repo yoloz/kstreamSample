@@ -159,10 +159,10 @@ public class StoreApp extends HttpServlet {
             AppInfo appInfo;
             if (appInfoMap == null || !appInfoMap.containsKey(app_id)) {
                 appInfo = new AppInfo();
+                appInfo.setId(app_id);
                 serviceInfo.addAppInfo(appInfo);
             }
             appInfo = serviceInfo.getAppInfoMap().get(app_id);
-            appInfo.setId(app_id);
             appInfo.setName(app_name);
             appInfo.setDesc(app_desc);
             appInfo.setZkUrl(zk_url);
@@ -201,11 +201,11 @@ public class StoreApp extends HttpServlet {
             if (operation_id == null || operation_id.isEmpty()) {
                 operation_id = ObjectId.get().toString();
                 mysqlOperator.update(status, null,
-                        "insert into ksoperations(app_id,operation_id,operation_json)values(?,?,?)",
+                        "insert into ksoperation(app_id,operation_id,operation_json)values(?,?,?)",
                         app_id, operation_id, KJson.writeValueAsString(value));
             } else {
                 mysqlOperator.update(status, null,
-                        "update ksoperations set operation_json=? where app_id=? and operation_id=?",
+                        "update ksoperation set operation_json=? where app_id=? and operation_id=?",
                         KJson.writeValueAsString(value), app_id, operation_id);
             }
             WSUtils.updateCacheStatus(app_id, AppInfo.Status.INIT);

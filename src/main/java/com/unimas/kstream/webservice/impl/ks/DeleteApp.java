@@ -118,8 +118,10 @@ public class DeleteApp extends HttpServlet {
                     MysqlOperator mysqlOperator = KsServer.getMysqlOperator();
                     mysqlOperator.update(status, null, sql, params);
                     if ("main".equals(type)) {
-                        for (ServiceInfo serviceInfo : KsServer.caches.values())
-                            serviceInfo.getAppInfoMap().remove(app_id);
+                        for (ServiceInfo serviceInfo : KsServer.caches.values()) {
+                            Map<String, AppInfo> appInfoMap = serviceInfo.getAppInfoMap();
+                            if (appInfoMap != null) appInfoMap.remove(app_id);
+                        }
                         Path dir = KsServer.app_dir.resolve(app_id);
                         if (Files.exists(dir, LinkOption.NOFOLLOW_LINKS))
                             Files.walkFileTree(dir, new WSUtils.EmptyDir());

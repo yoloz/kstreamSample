@@ -112,7 +112,7 @@ public class WSUtils {
         if (app_id == null) return null;
         for (ServiceInfo serviceInfo : KsServer.caches.values()) {
             Map<String, AppInfo> appInfoMap = serviceInfo.getAppInfoMap();
-            if (appInfoMap.containsKey(app_id)) {
+            if (appInfoMap != null && appInfoMap.containsKey(app_id)) {
                 AppInfo appInfo = serviceInfo.getAppInfoMap().get(app_id);
                 AppInfo.Status status = appInfo.getStatus();
                 if (status == AppInfo.Status.INIT || status == AppInfo.Status.ODD) {

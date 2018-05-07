@@ -1,4 +1,4 @@
-package com.unimas.kstream.webservice.impl.ds;
+package com.unimas.kstream.webservice.impl.ka;
 
 import com.google.gson.reflect.TypeToken;
 import com.unimas.kstream.KsServer;
@@ -8,7 +8,6 @@ import com.unimas.kstream.webservice.WSUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.servlet.ServletOutputStream;
 import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
@@ -17,31 +16,33 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.sql.SQLException;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
-public class GetDS extends HttpServlet {
+public class GetAddr extends HttpServlet {
 
-    private final Logger logger = LoggerFactory.getLogger(GetDS.class);
+    private final Logger logger = LoggerFactory.getLogger(GetAddr.class);
 
     /**
-     * Called by the server (via the <code>service</code> method)
-     * to allow a servlet to handle a POST request.
-     * <p>
-     * The HTTP POST method allows the client to send
-     * data of unlimited length to the Web server a single time
-     * and is useful when posting information such as
-     * credit card numbers.
+     * Called by the server (via the <code>service</code> method) to
+     * allow a servlet to handle a GET request.
+     *
+     * <p>Overriding this method to support a GET request also
+     * automatically supports an HTTP HEAD request. A HEAD
+     * request is a GET request that returns no body in the
+     * response, only the request header fields.
      *
      * <p>When overriding this method, read the request data,
-     * write the response headers, get the response's writer or output
-     * stream object, and finally, write the response data. It's best
-     * to include content type and encoding. When using a
-     * <code>PrintWriter</code> object to return the response, set the
-     * content type before accessing the <code>PrintWriter</code> object.
+     * write the response headers, get the response's writer or
+     * output stream object, and finally, write the response data.
+     * It's best to include content type and encoding. When using
+     * a <code>PrintWriter</code> object to return the response,
+     * set the content type before accessing the
+     * <code>PrintWriter</code> object.
      *
-     * <p>The servlet container must write the headers before committing the
-     * response, because in HTTP the headers must be sent before the
-     * response body.
+     * <p>The servlet container must write the headers before
+     * committing the response, because in HTTP the headers must be sent
+     * before the response body.
      *
      * <p>Where possible, set the Content-Length header (with the
      * {@link ServletResponse#setContentLength} method),
@@ -53,13 +54,21 @@ public class GetDS extends HttpServlet {
      * <p>When using HTTP 1.1 chunked encoding (which means that the response
      * has a Transfer-Encoding header), do not set the Content-Length header.
      *
-     * <p>This method does not need to be either safe or idempotent.
-     * Operations requested through POST can have side effects for
-     * which the user can be held accountable, for example,
-     * updating stored data or buying items online.
+     * <p>The GET method should be safe, that is, without
+     * any side effects for which users are held responsible.
+     * For example, most form queries have no side effects.
+     * If a client request is intended to change stored data,
+     * the request should use some other HTTP method.
      *
-     * <p>If the HTTP POST request is incorrectly formatted,
-     * <code>doPost</code> returns an HTTP "Bad Request" message.
+     * <p>The GET method should also be idempotent, meaning
+     * that it can be safely repeated. Sometimes making a
+     * method safe also makes it idempotent. For example,
+     * repeating queries is both safe and idempotent, but
+     * buying a product online or modifying data is neither
+     * safe nor idempotent.
+     *
+     * <p>If the request is incorrectly formatted, <code>doGet</code>
+     * returns an HTTP "Bad Request" message.
      *
      * @param req  an {@link HttpServletRequest} object that
      *             contains the request the client has made
@@ -69,27 +78,27 @@ public class GetDS extends HttpServlet {
      *             to the client
      * @throws IOException if an input or output error is
      *                     detected when the servlet handles
-     *                     the request
-     * @see ServletOutputStream
+     *                     the GET request
      * @see ServletResponse#setContentType
      */
     @Override
-    protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws IOException {
+    protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws IOException {
         String body = WSUtils.readInputStream(req.getInputStream());
-        logger.debug("getDS==>" + body);
-        Map<String, String> bodyObj = KJson.readStringValue(body);
-        String ds_id = bodyObj.get("ds_id");
+        logger.debug("getAddr==>" + body);
         String error = null;
         String result = "{}";
         MysqlOperator mysqlOperator = KsServer.getMysqlOperator();
         try {
-            Map<String, String> map = mysqlOperator.query(
-                    "select ds_name,ds_type,ds_json from ciisource where ds_id=?", ds_id).get(0);
-            if (map != null) {
+            String kds_name = "平台kafka";
+            List<Map<String, String>> list = mysqlOperator.query("select ds_id,ds_json from ciisource where ds_name=?",
+                    kds_name);
+            if (list.size() > 1) error = "数据源中存在多个名称[平台kafka]记录";
+            if (error == null && list.size() == 1) {
+                Map<String, String> m = list.get(0);
                 Map<String, String> rm = new HashMap<>(1);
-                rm.put("ds_id", ds_id);
-                rm.put("ds_type", DSType.getType(Integer.parseInt(map.get("ds_type"))));
-                rm.putAll(map);
+                rm.put("kds_id", m.get("ds_id"));
+                rm.put("kds_name", kds_name);
+                rm.putAll(KJson.readStringValue(m.get("ds_json")));
                 result = KJson.writeValue(rm, new TypeToken<Map<String, String>>() {
                 }.getType());
             }

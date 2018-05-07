@@ -110,7 +110,7 @@ public class GetTopics extends HttpServlet {
 
         OutputStream outputStream = resp.getOutputStream();
         if (error == null) {
-            String result = "{\"success\":true,\"results\":\"" + results + "\"}";
+            String result = "{\"success\":true,\"results\":" + results + "}";
             outputStream.write(result.getBytes("utf-8"));
         } else {
             String result = "{\"success\":false,\"error\":\"" + error + "\"}";

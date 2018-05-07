@@ -5,6 +5,9 @@ import com.unimas.kstream.bean.AppInfo;
 import com.unimas.kstream.bean.ServiceInfo;
 import com.unimas.kstream.error.KRunException;
 import com.unimas.kstream.kafka.KaJMX;
+import com.unimas.kstream.webservice.impl.ds.DeleteDS;
+import com.unimas.kstream.webservice.impl.ds.GetDS;
+import com.unimas.kstream.webservice.impl.ka.GetAddr;
 import kafka.KsKaClient;
 import com.unimas.kstream.webservice.RegularlyUpdate;
 import com.unimas.kstream.webservice.MysqlOperator;
@@ -110,6 +113,7 @@ public class KsServer {
         servletHandler.addServletWithMapping(GetTopics.class, "/cii/ks/getTopics");
 
         servletHandler.addServletWithMapping(SetAddr.class, "/cii/ka/setAddr");
+        servletHandler.addServletWithMapping(GetAddr.class, "/cii/ka/getAddr");
         servletHandler.addServletWithMapping(GetAllTopic.class, "/cii/ka/getAllTopic");
         servletHandler.addServletWithMapping(GetTopic.class, "/cii/ka/getTopic");
         servletHandler.addServletWithMapping(LogEndOffset.class, "/cii/ka/logEndOffset");
@@ -118,6 +122,8 @@ public class KsServer {
         servletHandler.addServletWithMapping(GetMpDS.class, "/cii/ds/getMpDS");
         servletHandler.addServletWithMapping(FilterName.class, "/cii/ds/filterName");
         servletHandler.addServletWithMapping(StoreSource.class, "/cii/ds/storeSource");
+        servletHandler.addServletWithMapping(DeleteDS.class, "/cii/ds/deleteDS");
+        servletHandler.addServletWithMapping(GetDS.class, "/cii/ds/getDS");
 
         servletHandler.addFilterWithMapping(CrossOriginFilter.class, "/cii/*", EnumSet.of(DispatcherType.REQUEST));
         this.server.setHandler(servletHandler);

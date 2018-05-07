@@ -99,7 +99,7 @@ public class DeployApp extends HttpServlet {
                         "select input_id,input_json from ksinput where app_id=?",
                         app_id);
                 List<Map<String, String>> operations = mysqlOperator.query(
-                        "select operation_id,operation_json from ksoperations where app_id=?",
+                        "select operation_id,operation_json from ksoperation where app_id=?",
                         app_id);
                 List<Map<String, String>> output = mysqlOperator.query(
                         "select output_json from ksoutput where app_id=?",

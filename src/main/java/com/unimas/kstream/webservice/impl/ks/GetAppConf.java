@@ -145,7 +145,7 @@ public class GetAppConf extends HttpServlet {
                 case "operation":
                     if (type_id == null || type_id.isEmpty()) {
                         List<Map<String, String>> operations = mysqlOperator.query(
-                                "select operation_id,operation_json from ksoperations where app_id=?",
+                                "select operation_id,operation_json from ksoperation where app_id=?",
                                 id);
                         List<Map<String, Object>> ol = new ArrayList<>();
                         for (Map<String, String> operation : operations) {
@@ -158,7 +158,7 @@ public class GetAppConf extends HttpServlet {
                     } else {
                         Map<String, Object> mop = new HashMap<>(1);
                         List<Map<String, String>> operations = mysqlOperator.query(
-                                "select operation_id,operation_json from ksoperations where operation_id=?",
+                                "select operation_id,operation_json from ksoperation where operation_id=?",
                                 type_id);
                         if (!operations.isEmpty()) {
                             Map<String, String> opm = operations.get(0);
