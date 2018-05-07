@@ -2,6 +2,7 @@ package com.unimas.kstream.kafka;
 
 import com.google.gson.reflect.TypeToken;
 import com.unimas.kstream.bean.KJson;
+import kafka.KsKaClient;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;

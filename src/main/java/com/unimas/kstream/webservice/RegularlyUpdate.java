@@ -3,6 +3,7 @@ package com.unimas.kstream.webservice;
 import com.google.common.io.Files;
 import com.unimas.kstream.KsServer;
 import com.unimas.kstream.bean.AppInfo;
+import com.unimas.kstream.bean.ServiceInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -38,33 +39,35 @@ public class RegularlyUpdate extends Thread {
     public void run() {
         while (!isInterrupted()) {
             final StringBuilder pidBuilder = new StringBuilder();
-            KsServer.caches.values().forEach(s -> s.getAppInfoMap().forEach((id, app) -> {
-                        File pf = KsServer.app_dir.resolve(id).resolve("pid").toFile();
-                        switch (app.getStatus()) {
-                            case RUN:
-                                if (!pf.exists()) {
-                                    logger.warn(id + " status run but pid file is not exit,change status to stop");
-                                    app.setStatus(AppInfo.Status.STOP);
-                                    app.setPid("");
-                                    app.setRuntime("—");
-                                } else app.setRuntime(getRunTime(id));
-                                break;
-                            default:
-                                if (pf.exists()) {
-                                    logger.warn(id + " status " + app.getStatus().getValue() +
-                                            " but pid file is exit,change status to run");
-                                    app.setStatus(AppInfo.Status.RUN);
-                                    try {
-                                        app.setPid(Files.readFirstLine(pf, Charset.forName("UTF-8")));
-                                    } catch (IOException e) {
-                                        logger.error("读取文件:" + pf.toString() + "失败", e);
-                                    }
-                                    app.setRuntime(getRunTime(id));
-                                } else app.setRuntime("—");
+            for (ServiceInfo s : KsServer.caches.values()) {
+                if (s.getAppInfoMap() != null) s.getAppInfoMap().forEach((id, app) -> {
+                            File pf = KsServer.app_dir.resolve(id).resolve("pid").toFile();
+                            switch (app.getStatus()) {
+                                case RUN:
+                                    if (!pf.exists()) {
+                                        logger.warn(id + " status run but pid file is not exit,change status to stop");
+                                        app.setStatus(AppInfo.Status.STOP);
+                                        app.setPid("");
+                                        app.setRuntime("—");
+                                    } else app.setRuntime(getRunTime(id));
+                                    break;
+                                default:
+                                    if (pf.exists()) {
+                                        logger.warn(id + " status " + app.getStatus().getValue() +
+                                                " but pid file is exit,change status to run");
+                                        app.setStatus(AppInfo.Status.RUN);
+                                        try {
+                                            app.setPid(Files.readFirstLine(pf, Charset.forName("UTF-8")));
+                                        } catch (IOException e) {
+                                            logger.error("读取文件:" + pf.toString() + "失败", e);
+                                        }
+                                        app.setRuntime(getRunTime(id));
+                                    } else app.setRuntime("—");
+                            }
+                            if (!app.getPid().isEmpty()) pidBuilder.append(app.getPid()).append(",");
                         }
-                        if (!app.getPid().isEmpty()) pidBuilder.append(app.getPid()).append(",");
-                    }
-            ));
+                );
+            }
             this.updateSysInfo(pidBuilder.toString());
             try {
                 Thread.sleep(60 * 1000);

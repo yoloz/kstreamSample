@@ -8,7 +8,7 @@ import com.unimas.kstream.StopProcess;
 import com.unimas.kstream.bean.KSource;
 import com.unimas.kstream.dic.DicSets;
 import com.unimas.kstream.error.KConfigException;
-import com.unimas.kstream.kafka.KsKaClient;
+import kafka.KsKaClient;
 import com.unimas.kstream.process.operation.Operation;
 import com.unimas.kstream.process.output.OutPut;
 import org.apache.kafka.clients.consumer.ConsumerConfig;

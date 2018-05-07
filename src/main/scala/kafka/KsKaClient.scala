@@ -1,19 +1,19 @@
-package com.unimas.kstream.kafka
+package kafka
 
 import java.util
 
 import kafka.admin.AdminOperationException
 import kafka.server.ConfigType
+import kafka.zk.{AdminZkClient, KafkaZkClient}
+import org.apache.kafka.common.TopicPartition
+import org.apache.kafka.common.internals.Topic
 import org.apache.kafka.common.security.JaasUtils
 import org.apache.kafka.common.utils.Time
-import kafka.zk.{AdminZkClient, KafkaZkClient}
-import org.apache.kafka.common.internals.Topic
-import org.apache.kafka.common.TopicPartition
 import org.apache.zookeeper.KeeperException.NodeExistsException
+import org.slf4j.{Logger, LoggerFactory}
 
 import scala.collection.JavaConverters._
 import scala.collection.Seq
-import org.slf4j.{Logger, LoggerFactory}
 
 class KsKaClient private(client: KafkaZkClient) {
 

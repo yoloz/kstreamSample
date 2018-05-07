@@ -5,7 +5,7 @@ import com.unimas.kstream.KsServer;
 import com.unimas.kstream.bean.AppInfo;
 import com.unimas.kstream.bean.KJson;
 import com.unimas.kstream.bean.ServiceInfo;
-import com.unimas.kstream.kafka.KsKaClient;
+import kafka.KsKaClient;
 import com.unimas.kstream.webservice.WSUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
