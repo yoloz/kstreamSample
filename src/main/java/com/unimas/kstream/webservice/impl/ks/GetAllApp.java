@@ -81,8 +81,9 @@ public class GetAllApp extends HttpServlet {
         Map<String, String> bodyObj = KJson.readStringValue(body);
         String service_id = bodyObj.get("service_id");
         List<Map<String, String>> list = new ArrayList<>(5);
-        if (KsServer.caches.containsKey(service_id))
-            for (AppInfo appInfo : KsServer.caches.get(service_id).getAppInfoMap().values()) {
+        if (KsServer.caches.containsKey(service_id)) {
+            Map<String, AppInfo> appInfoMap = KsServer.caches.get(service_id).getAppInfoMap();
+            if (appInfoMap != null) for (AppInfo appInfo : appInfoMap.values()) {
                 Map<String, String> map = new HashMap<>();
                 map.put("app_id", appInfo.getId());
                 map.put("app_name", appInfo.getName());
@@ -93,6 +94,7 @@ public class GetAllApp extends HttpServlet {
                 map.put("app_time", appInfo.getRuntime());
                 list.add(map);
             }
+        }
         OutputStream outputStream = resp.getOutputStream();
         String result = "{\"success\":true,\"results\":" + KJson.writeValue(list,
                 new TypeToken<List<Map<String, String>>>() {

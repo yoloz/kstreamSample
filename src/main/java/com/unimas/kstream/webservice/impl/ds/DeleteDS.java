@@ -1,9 +1,7 @@
-package com.unimas.kstream.webservice.impl.ks;
+package com.unimas.kstream.webservice.impl.ds;
 
 import com.unimas.kstream.KsServer;
-import com.unimas.kstream.bean.AppInfo;
 import com.unimas.kstream.bean.KJson;
-import com.unimas.kstream.bean.ServiceInfo;
 import com.unimas.kstream.webservice.MysqlOperator;
 import com.unimas.kstream.webservice.WSUtils;
 import org.slf4j.Logger;
@@ -16,15 +14,13 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.nio.file.Files;
-import java.nio.file.LinkOption;
-import java.nio.file.Path;
 import java.sql.SQLException;
+import java.util.List;
 import java.util.Map;
 
-public class DeleteService extends HttpServlet {
+public class DeleteDS extends HttpServlet {
 
-    private final Logger logger = LoggerFactory.getLogger(DeleteService.class);
+    private final Logger logger = LoggerFactory.getLogger(DeleteDS.class);
 
     /**
      * Called by the server (via the <code>service</code> method)
@@ -79,27 +75,24 @@ public class DeleteService extends HttpServlet {
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws IOException {
         String body = WSUtils.readInputStream(req.getInputStream());
-        logger.debug("deleteService==>" + body);
+        logger.debug("deleteDS==>" + body);
         Map<String, String> bodyObj = KJson.readStringValue(body);
-        String service_id = bodyObj.get("service_id");
-        String error = WSUtils.unModify(service_id);
-        if (error == null) {
-            try {
-                MysqlOperator mysqlOperator = KsServer.getMysqlOperator();
-                mysqlOperator.fixUpdate("delete from ksservice where service_id=?", service_id);
-                ServiceInfo serviceInfo = KsServer.caches.remove(service_id);
-                if (serviceInfo != null) {
-                    Map<String, AppInfo> appInfoMap = serviceInfo.getAppInfoMap();
-                    if (appInfoMap != null) for (String app_id : appInfoMap.keySet()) {
-                        Path dir = KsServer.app_dir.resolve(app_id);
-                        if (Files.exists(dir, LinkOption.NOFOLLOW_LINKS))
-                            Files.walkFileTree(dir, new WSUtils.EmptyDir());
-                    }
-                }
-            } catch (SQLException | IOException e) {
-                error = "删除失败:" + e.getMessage();
-                logger.error(error, e);
+        String ds_id = bodyObj.get("ds_id");
+        String error = null;
+        try {
+            MysqlOperator mysqlOperator = KsServer.getMysqlOperator();
+            List<Map<String, String>> used = mysqlOperator.query("select app_name from ksapp where ds_id=?",
+                    ds_id);
+            if (used.isEmpty()) {
+                mysqlOperator.fixUpdate("delete from ciisource where ds_id=?", ds_id);
+            } else {
+                StringBuilder names = new StringBuilder();
+                used.forEach(m -> names.append(m.get("app_name")).append(","));
+                error = "数据源被任务[" + names.substring(0, names.length() - 1) + "]使用中,不可删除";
             }
+        } catch (SQLException e) {
+            error = "删除失败:" + e.getMessage();
+            logger.error(error, e);
         }
         OutputStream outputStream = resp.getOutputStream();
         String result;

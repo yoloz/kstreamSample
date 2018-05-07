@@ -70,6 +70,7 @@ public class WSUtils {
             if (KsServer.caches.containsKey(service_id)) {
                 ServiceInfo serviceInfo = KsServer.caches.get(service_id);
                 Map<String, AppInfo> appInfoMap = serviceInfo.getAppInfoMap();
+                if (appInfoMap == null) return null;
                 if (ids.length == 2) {
                     String app_id = ids[1];
                     AppInfo appInfo = appInfoMap.get(app_id);
@@ -93,6 +94,7 @@ public class WSUtils {
             String app_id = ids[1];
             for (ServiceInfo serviceInfo : KsServer.caches.values()) {
                 Map<String, AppInfo> appInfoMap = serviceInfo.getAppInfoMap();
+                if (appInfoMap == null) return null;
                 if (appInfoMap.containsKey(app_id)) {
                     AppInfo appInfo = appInfoMap.get(app_id);
                     AppInfo.Status status = appInfo.getStatus();

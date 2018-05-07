@@ -13,6 +13,7 @@ public enum DSType {
         this.type = type;
     }
 
+
     public String getValue() {
         return value;
     }
@@ -21,10 +22,19 @@ public enum DSType {
         return type;
     }
 
-    public int getType(String value) {
+    public static int getType(String value) {
         switch (value) {
             case "kafka":
                 return 0;
+            default:
+                throw new IllegalArgumentException("ds_type:[" + value + "] undefined");
+        }
+    }
+
+    public static String getType(int value) {
+        switch (value) {
+            case 0:
+                return "kafka";
             default:
                 throw new IllegalArgumentException("ds_type:[" + value + "] undefined");
         }

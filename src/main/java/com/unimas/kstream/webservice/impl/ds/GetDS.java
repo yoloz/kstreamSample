@@ -1,9 +1,8 @@
-package com.unimas.kstream.webservice.impl.ks;
+package com.unimas.kstream.webservice.impl.ds;
 
+import com.google.gson.reflect.TypeToken;
 import com.unimas.kstream.KsServer;
-import com.unimas.kstream.bean.AppInfo;
 import com.unimas.kstream.bean.KJson;
-import com.unimas.kstream.bean.ServiceInfo;
 import com.unimas.kstream.webservice.MysqlOperator;
 import com.unimas.kstream.webservice.WSUtils;
 import org.slf4j.Logger;
@@ -16,15 +15,13 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.nio.file.Files;
-import java.nio.file.LinkOption;
-import java.nio.file.Path;
 import java.sql.SQLException;
+import java.util.HashMap;
 import java.util.Map;
 
-public class DeleteService extends HttpServlet {
+public class GetDS extends HttpServlet {
 
-    private final Logger logger = LoggerFactory.getLogger(DeleteService.class);
+    private final Logger logger = LoggerFactory.getLogger(GetDS.class);
 
     /**
      * Called by the server (via the <code>service</code> method)
@@ -79,35 +76,34 @@ public class DeleteService extends HttpServlet {
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws IOException {
         String body = WSUtils.readInputStream(req.getInputStream());
-        logger.debug("deleteService==>" + body);
+        logger.debug("getDS==>" + body);
         Map<String, String> bodyObj = KJson.readStringValue(body);
-        String service_id = bodyObj.get("service_id");
-        String error = WSUtils.unModify(service_id);
-        if (error == null) {
-            try {
-                MysqlOperator mysqlOperator = KsServer.getMysqlOperator();
-                mysqlOperator.fixUpdate("delete from ksservice where service_id=?", service_id);
-                ServiceInfo serviceInfo = KsServer.caches.remove(service_id);
-                if (serviceInfo != null) {
-                    Map<String, AppInfo> appInfoMap = serviceInfo.getAppInfoMap();
-                    if (appInfoMap != null) for (String app_id : appInfoMap.keySet()) {
-                        Path dir = KsServer.app_dir.resolve(app_id);
-                        if (Files.exists(dir, LinkOption.NOFOLLOW_LINKS))
-                            Files.walkFileTree(dir, new WSUtils.EmptyDir());
-                    }
-                }
-            } catch (SQLException | IOException e) {
-                error = "删除失败:" + e.getMessage();
-                logger.error(error, e);
+        String ds_id = bodyObj.get("ds_id");
+        String error = null;
+        String result = "{}";
+        MysqlOperator mysqlOperator = KsServer.getMysqlOperator();
+        try {
+            Map<String, String> map = mysqlOperator.query(
+                    "select ds_name,ds_type,ds_json from ciisource where ds_id=?", ds_id).get(0);
+            if (map != null) {
+                Map<String, String> rm = new HashMap<>(1);
+                rm.put("ds_type", DSType.getType(Integer.parseInt(map.get("ds_type"))));
+                rm.putAll(map);
+                result = KJson.writeValue(rm, new TypeToken<Map<String, String>>() {
+                }.getType());
             }
+        } catch (SQLException e) {
+            error = "获取信息失败:" + e.getMessage();
+            logger.error(error, e);
         }
         OutputStream outputStream = resp.getOutputStream();
-        String result;
+        String resultS;
         if (error == null) {
-            outputStream.write("{\"success\":true}".getBytes("utf-8"));
+            resultS = "{\"success\":true,\"results\":" + result + "}";
+            outputStream.write(resultS.getBytes("utf-8"));
         } else {
-            result = "{\"success\":false,\"error\":\"" + error + "\"}";
-            outputStream.write(result.getBytes("utf-8"));
+            resultS = "{\"success\":false,\"error\":\"" + error + "\"}";
+            outputStream.write(resultS.getBytes("utf-8"));
         }
     }
 }

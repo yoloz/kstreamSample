@@ -237,10 +237,12 @@ public class KsServer {
     }
 
     public static void setKaJMX(String url) throws IOException {
+        if (kaJMX != null) kaJMX.close();
         kaJMX = new KaJMX(url);
     }
 
     public static void setKsKaClient(String url) {
+        if (ksKaClient != null) ksKaClient.close();
         ksKaClient = KsKaClient.apply(url);
     }
 

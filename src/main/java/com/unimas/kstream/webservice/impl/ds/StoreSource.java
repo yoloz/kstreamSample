@@ -79,8 +79,8 @@ public class StoreSource extends HttpServlet {
         logger.debug("storeSource==>" + body);
         Map<String, Object> bodyObj = KJson.readValue(body);
         String ds_id = (String) bodyObj.get("ds_id");
-        String ds_name = (String) bodyObj.get("ds_tname");
-        String ds_type = (String) bodyObj.get("ds_type");
+        String ds_name = (String) bodyObj.get("ds_name");
+        int ds_type = DSType.getType((String) bodyObj.get("ds_type"));
         Map<String, Object> ds_json = (Map<String, Object>) bodyObj.get("ds_json");
         String error = null;
         MysqlOperator mysqlOperator = KsServer.getMysqlOperator();
