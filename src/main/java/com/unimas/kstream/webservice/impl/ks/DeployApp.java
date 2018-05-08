@@ -108,9 +108,11 @@ public class DeployApp extends HttpServlet {
                     error = "任务数据源或输出为空,请配置后再部署";
                 } else {
                     for (Map<String, String> m : inputs) {
-                        String _id = m.get("input_id");
-                        input_ids.append(_id).append(",");
-                        writeFile(dir.resolve(_id + ".properties"), "input", m.get("input_json"), _id);
+//                        String _id = m.get("input_id");
+                        Map<String, String> map = KJson.readStringValue(m.get("input_json"));
+                        String ks_name = map.get("ks_topics");
+                        input_ids.append(ks_name).append(",");
+                        writeFile(dir.resolve(ks_name + ".properties"), "input", m.get("input_json"), ks_name);
                     }
                     for (Map<String, String> m : operations) {
                         String _id = m.get("operation_id");

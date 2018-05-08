@@ -102,7 +102,7 @@ public class DeleteApp extends HttpServlet {
                     break;
                 case "operation":
                     status = "update ksapp set app_status=0 where app_id='" + app_id + "'";
-                    sql = "delete from ksoperations where app_id=? and operation_id=?";
+                    sql = "delete from ksoperation where app_id=? and operation_id=?";
                     params = new String[]{app_id, type_id};
                     break;
                 case "output":
