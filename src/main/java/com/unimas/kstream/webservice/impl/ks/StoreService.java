@@ -105,7 +105,7 @@ public class StoreService extends HttpServlet {
                 KsServer.caches.put(id, info);
             }
         } catch (SQLException e) {
-            error = "保存失败:" + e.getMessage();
+            error = "保存失败[数据库异常]";
             logger.error(error, e);
         }
         OutputStream outputStream = resp.getOutputStream();

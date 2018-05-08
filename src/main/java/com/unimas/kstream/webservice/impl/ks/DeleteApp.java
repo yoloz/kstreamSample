@@ -126,8 +126,8 @@ public class DeleteApp extends HttpServlet {
                         if (Files.exists(dir, LinkOption.NOFOLLOW_LINKS))
                             Files.walkFileTree(dir, new WSUtils.EmptyDir());
                     } else WSUtils.updateCacheStatus(app_id, AppInfo.Status.INIT);
-                } catch (SQLException | IOException e) {
-                    error = "删除失败:" + e.getMessage();
+                } catch (SQLException e) {
+                    error = "删除失败[数据库错误]";
                     logger.error(error, e);
                 }
             }

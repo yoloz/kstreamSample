@@ -5,6 +5,7 @@ import com.unimas.kstream.bean.AppInfo;
 import com.unimas.kstream.bean.ServiceInfo;
 import com.unimas.kstream.error.KRunException;
 import com.unimas.kstream.kafka.KaJMX;
+import com.unimas.kstream.webservice.WSUtils;
 import com.unimas.kstream.webservice.impl.ds.DeleteDS;
 import com.unimas.kstream.webservice.impl.ds.GetDS;
 import com.unimas.kstream.webservice.impl.ka.GetAddr;
@@ -159,7 +160,7 @@ public class KsServer {
                 String app_name = apps.get("app_name");
                 appInfo.setName(app_name);
                 appInfo.setDesc(apps.get("app_desc"));
-                appInfo.setStatus(apps.get("app_status"));
+                appInfo.setStatus(Integer.parseInt(apps.get("app_status")));
                 appInfo.setZkUrl(apps.get("zk_url"));
                 if (appInfo.getStatus() == AppInfo.Status.RUN) {
                     File pf = app_dir.resolve(app_id).resolve("pid").toFile();
@@ -168,6 +169,7 @@ public class KsServer {
                         appInfo.setPid(pid);
                     } else {
                         logger.warn("任务 " + app_name + " pid 文件丢失,状态重置为stop");
+                        WSUtils.updateMysqlStatus(app_id, AppInfo.Status.STOP);
                         appInfo.setStatus(AppInfo.Status.STOP);
                     }
                 }

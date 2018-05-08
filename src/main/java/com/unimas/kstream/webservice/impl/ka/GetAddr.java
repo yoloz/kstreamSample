@@ -103,7 +103,7 @@ public class GetAddr extends HttpServlet {
                 }.getType());
             }
         } catch (SQLException e) {
-            error = "获取信息失败:" + e.getMessage();
+            error = "获取信息失败[数据库错误]";
             logger.error(error, e);
         }
         OutputStream outputStream = resp.getOutputStream();

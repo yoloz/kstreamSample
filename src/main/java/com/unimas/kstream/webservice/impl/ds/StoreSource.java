@@ -1,6 +1,7 @@
 package com.unimas.kstream.webservice.impl.ds;
 
 import com.unimas.kstream.KsServer;
+import com.unimas.kstream.bean.DSType;
 import com.unimas.kstream.bean.KJson;
 import com.unimas.kstream.bean.ObjectId;
 import com.unimas.kstream.webservice.MysqlOperator;
@@ -96,7 +97,7 @@ public class StoreSource extends HttpServlet {
                         ds_name, ds_type, KJson.writeValueAsString(ds_json), ds_id);
             }
         } catch (SQLException e) {
-            error = "保存失败:" + e.getMessage();
+            error = "保存失败[数据库错误]";
             logger.error(error, e);
         }
         OutputStream outputStream = resp.getOutputStream();

@@ -89,7 +89,7 @@ public class OrderApp extends HttpServlet {
                         operation_order, app_id);
                 WSUtils.updateCacheStatus(app_id, AppInfo.Status.INIT);
             } catch (SQLException e) {
-                error = "顺序更新失败:" + e.getMessage();
+                error = "顺序更新失败[数据库异常]";
                 logger.error(error, e);
             }
         }

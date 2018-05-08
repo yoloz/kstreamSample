@@ -97,7 +97,7 @@ public class StopApp extends HttpServlet {
                 StopProcess.stop(KsServer.app_dir.resolve(app_id).resolve("pid"));
             } else error = app.getName() + " 未运行或启动,无需停止!";
         } catch (SQLException e) {
-            error = "停止失败:" + e.getMessage();
+            error = "停止失败[数据库异常]";
             logger.error(app_id, e.getMessage());
         }
         else error = "任务内存中不存在";

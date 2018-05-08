@@ -91,7 +91,7 @@ public class DeleteDS extends HttpServlet {
                 error = "数据源被任务[" + names.substring(0, names.length() - 1) + "]使用中,不可删除";
             }
         } catch (SQLException e) {
-            error = "删除失败:" + e.getMessage();
+            error = "数据源删除失败[数据库错误]";
             logger.error(error, e);
         }
         OutputStream outputStream = resp.getOutputStream();

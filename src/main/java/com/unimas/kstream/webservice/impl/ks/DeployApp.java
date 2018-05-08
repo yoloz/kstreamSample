@@ -127,8 +127,8 @@ public class DeployApp extends HttpServlet {
                     mysqlOperator.fixUpdate("update ksapp set app_status=1 where app_id=?", app_id);
                     WSUtils.updateCacheStatus(app_id, AppInfo.Status.STOP);
                 }
-            } catch (SQLException e) {
-                error = "部署失败:" + e.getMessage();
+            } catch (SQLException | IOException e) {
+                error = "部署失败[数据库或IO错误]";
                 logger.error(error, e);
             }
         }

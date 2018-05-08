@@ -74,10 +74,10 @@ public class AppInfo {
         this.status = status;
     }
 
-    public void setStatus(String status) {
-        if (Status.RUN.getValue().equals(status)) this.status = Status.RUN;
-        else if (Status.ODD.getValue().equals(status)) this.status = Status.ODD;
-        else if (Status.STOP.getValue().equals(status)) this.status = Status.STOP;
+    public void setStatus(int status) {
+        if (Status.RUN.getType() == status) this.status = Status.RUN;
+        else if (Status.ODD.getType() == status) this.status = Status.ODD;
+        else if (Status.STOP.getType() == status) this.status = Status.STOP;
         else this.status = Status.INIT;
     }
 

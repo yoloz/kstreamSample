@@ -80,7 +80,7 @@ public class LogEndOffset extends HttpServlet {
         try {
             offsets = KsServer.getKaJMX().getLogEndOffset(topic);
         } catch (Throwable e) {
-            error = e.getMessage();
+            error = "获取信息失败[scala-api]";
             logger.error(error, e);
         }
         OutputStream outputStream = resp.getOutputStream();

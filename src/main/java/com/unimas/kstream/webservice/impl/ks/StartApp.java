@@ -99,7 +99,7 @@ public class StartApp extends HttpServlet {
                 infoS.start();
                 int exitCode = process.waitFor();
                 if (exitCode == 0) {
-                    mysqlOperator.fixUpdate("update ksapp set app_status=4 where app_id=?",
+                    mysqlOperator.fixUpdate("update ksapp set app_status=2 where app_id=?",
                             app_id);
                     WSUtils.updateCacheStatus(app_id, AppInfo.Status.START);
                 } else {
@@ -109,7 +109,7 @@ public class StartApp extends HttpServlet {
                     WSUtils.updateCacheStatus(app_id, AppInfo.Status.ODD);
                 }
             } catch (SQLException | InterruptedException e) {
-                error = "启动失败:" + e.getMessage();
+                error = "启动失败[数据库或运行异常]";
                 logger.error(app_id, e.getMessage());
             } finally {
                 if (errorS != null) errorS.interrupt();

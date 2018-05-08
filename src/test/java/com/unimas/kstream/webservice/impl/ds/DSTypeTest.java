@@ -1,5 +1,6 @@
 package com.unimas.kstream.webservice.impl.ds;
 
+import com.unimas.kstream.bean.DSType;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;

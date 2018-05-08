@@ -3,6 +3,8 @@ package com.unimas.kstream.webservice;
 import com.unimas.kstream.KsServer;
 import com.unimas.kstream.bean.AppInfo;
 import com.unimas.kstream.bean.ServiceInfo;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -13,9 +15,12 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
+import java.sql.SQLException;
 import java.util.Map;
 
 public class WSUtils {
+
+    private static final Logger logger = LoggerFactory.getLogger(WSUtils.class);
 
     /**
      * 读取inputstream内容
@@ -56,6 +61,15 @@ public class WSUtils {
                 appInfoMap.get(app_id).setStatus(status);
                 break;
             }
+        }
+    }
+
+    public static void updateMysqlStatus(String app_id, AppInfo.Status status) {
+        try {
+            KsServer.getMysqlOperator().fixUpdate("update ksapp set app_status=? where app_id=?",
+                    status.getType(), app_id);
+        } catch (SQLException e) {
+            logger.error(e.getMessage(), e);
         }
     }
 

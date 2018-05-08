@@ -43,9 +43,12 @@ public class RegularlyUpdate extends Thread {
                 if (s.getAppInfoMap() != null) s.getAppInfoMap().forEach((id, app) -> {
                             File pf = KsServer.app_dir.resolve(id).resolve("pid").toFile();
                             switch (app.getStatus()) {
+                                case START:
                                 case RUN:
                                     if (!pf.exists()) {
-                                        logger.warn(id + " status run but pid file is not exit,change status to stop");
+                                        logger.warn(id + " status " + app.getStatus().getValue() +
+                                                " but pid file is not exit,change status to stop");
+                                        WSUtils.updateMysqlStatus(app.getId(), AppInfo.Status.STOP);
                                         app.setStatus(AppInfo.Status.STOP);
                                         app.setPid("");
                                         app.setRuntime("—");
@@ -55,6 +58,7 @@ public class RegularlyUpdate extends Thread {
                                     if (pf.exists()) {
                                         logger.warn(id + " status " + app.getStatus().getValue() +
                                                 " but pid file is exit,change status to run");
+                                        WSUtils.updateMysqlStatus(app.getId(), AppInfo.Status.RUN);
                                         app.setStatus(AppInfo.Status.RUN);
                                         try {
                                             app.setPid(Files.readFirstLine(pf, Charset.forName("UTF-8")));

@@ -17,6 +17,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.sql.SQLException;
 import java.util.List;
 import java.util.Map;
 
@@ -93,25 +94,32 @@ public class SetAddr extends HttpServlet {
             else if (list.size() == 1) ds_id = list.get(0).get("ds_id");
             else error = "数据源中存在多个名称[平台kafka]记录";
             if (error == null) {
-                if (jmxUrl != null && !jmxUrl.isEmpty()) KsServer.setKaJMX(jmxUrl);
-                if (zkUrl != null && !zkUrl.isEmpty()) KsServer.setKsKaClient(zkUrl);
-                KsServer.overWrite(zkUrl, jmxUrl);
-                Map<String, String> ds_jsonM = ImmutableMap.of("kafka_url", kaUrl == null ? "" : kaUrl,
-                        "zk_url", zkUrl == null ? "" : zkUrl, "jmx_url", jmxUrl == null ? "" : jmxUrl);
-                if (list.isEmpty()) {
-                    mysqlOperator.fixUpdate(
-                            "insert into ciisource(ds_id,ds_name,ds_type,ds_json)values(?,?,?,?)",
-                            ds_id, kds_name, 0, KJson.writeValue(ds_jsonM, new TypeToken<Map<String, String>>() {
-                            }.getType()));
-                } else {
-                    mysqlOperator.update(null, null,
-                            "update ciisource set ds_name=?,ds_type=?,ds_json=? where ds_id=?",
-                            kds_name, 0, KJson.writeValue(ds_jsonM, new TypeToken<Map<String, String>>() {
-                            }.getType()), ds_id);
+                try {
+                    if (jmxUrl != null && !jmxUrl.isEmpty()) KsServer.setKaJMX(jmxUrl);
+                    if (zkUrl != null && !zkUrl.isEmpty()) KsServer.setKsKaClient(zkUrl);
+                } catch (Throwable e) {
+                    error = "设置平台环境出错[scala-api]";
+                    logger.error(error, e);
+                }
+                if (error == null) {
+                    KsServer.overWrite(zkUrl, jmxUrl);
+                    Map<String, String> ds_jsonM = ImmutableMap.of("kafka_url", kaUrl == null ? "" : kaUrl,
+                            "zk_url", zkUrl == null ? "" : zkUrl, "jmx_url", jmxUrl == null ? "" : jmxUrl);
+                    if (list.isEmpty()) {
+                        mysqlOperator.fixUpdate(
+                                "insert into ciisource(ds_id,ds_name,ds_type,ds_json)values(?,?,?,?)",
+                                ds_id, kds_name, 0, KJson.writeValue(ds_jsonM, new TypeToken<Map<String, String>>() {
+                                }.getType()));
+                    } else {
+                        mysqlOperator.update(null, null,
+                                "update ciisource set ds_name=?,ds_type=?,ds_json=? where ds_id=?",
+                                kds_name, 0, KJson.writeValue(ds_jsonM, new TypeToken<Map<String, String>>() {
+                                }.getType()), ds_id);
+                    }
                 }
             }
-        } catch (Throwable e) {
-            error = "平台kafka设置失败:" + e.getMessage();
+        } catch (SQLException | IOException e) {
+            error = "平台kafka设置失败[数据库或IO错误]";
             logger.error(error, e);
         }
         OutputStream outputStream = resp.getOutputStream();

@@ -151,8 +151,6 @@ public class AppImpl extends Thread implements KUtils {
     public void run() {
         logger.info("#################### kServer start ####################");
         try {
-            Files.write(Paths.get(AppServer.app_dir, "pid"), ManagementFactory.getRuntimeMXBean()
-                    .getName().split("@")[0].getBytes("UTF-8"));
             final KStreamBuilder builder = new KStreamBuilder();
             init(builder);
             getDic();
@@ -166,6 +164,8 @@ public class AppImpl extends Thread implements KUtils {
             outputStream();
             kafkaStreams = new KafkaStreams(builder, mainProperties);
             kafkaStreams.start();
+            Files.write(Paths.get(AppServer.app_dir, "pid"), ManagementFactory.getRuntimeMXBean()
+                    .getName().split("@")[0].getBytes("UTF-8"));
         } catch (Throwable e) {
             logger.error(e.getMessage(), e);
             StopProcess.stop(Paths.get(AppServer.app_dir, "pid"));

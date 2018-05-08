@@ -109,7 +109,7 @@ public class StoreApp extends HttpServlet {
                     error = "storeApp=>type:" + type + " 不支持";
             }
         } catch (SQLException | IOException e) {
-            error = "保存失败:" + e.getMessage();
+            error = "保存失败[数据库或IO异常]";
             logger.error(error, e);
         }
         OutputStream outputStream = resp.getOutputStream();
@@ -130,8 +130,7 @@ public class StoreApp extends HttpServlet {
         String app_name = (String) value.remove("app_name");
         String app_desc = (String) value.remove("app_desc");
         String ds_id = (String) value.remove("ds_id");
-        String error = (app_id == null || app_id.isEmpty()) ? WSUtils.unModify(service_id)
-                : WSUtils.unModify(service_id, app_id);
+        String error = (app_id == null || app_id.isEmpty()) ? null : WSUtils.unModify(service_id, app_id);
         if (error == null) {
             MysqlOperator mysqlOperator = KsServer.getMysqlOperator();
             Map<String, String> dsm = mysqlOperator.query("select ds_name,ds_json from ciisource where ds_id=?",

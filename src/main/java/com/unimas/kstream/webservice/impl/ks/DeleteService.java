@@ -97,7 +97,7 @@ public class DeleteService extends HttpServlet {
                     }
                 }
             } catch (SQLException | IOException e) {
-                error = "删除失败:" + e.getMessage();
+                error = "删除失败[数据库或IO错误]";
                 logger.error(error, e);
             }
         }

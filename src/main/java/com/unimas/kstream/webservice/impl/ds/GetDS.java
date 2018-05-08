@@ -2,6 +2,7 @@ package com.unimas.kstream.webservice.impl.ds;
 
 import com.google.gson.reflect.TypeToken;
 import com.unimas.kstream.KsServer;
+import com.unimas.kstream.bean.DSType;
 import com.unimas.kstream.bean.KJson;
 import com.unimas.kstream.webservice.MysqlOperator;
 import com.unimas.kstream.webservice.WSUtils;
@@ -94,7 +95,7 @@ public class GetDS extends HttpServlet {
                 }.getType());
             }
         } catch (SQLException e) {
-            error = "获取信息失败:" + e.getMessage();
+            error = "获取信息失败[数据库错误]";
             logger.error(error, e);
         }
         OutputStream outputStream = resp.getOutputStream();

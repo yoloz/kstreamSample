@@ -101,7 +101,7 @@ public class GetTopics extends HttpServlet {
                         }.getType());
 
             } catch (Throwable e) {
-                error = e.getMessage();
+                error = "获取数据失败[scala-api或IO异常]";
                 logger.error(error, e);
             } finally {
                 if (client != null) client.close();

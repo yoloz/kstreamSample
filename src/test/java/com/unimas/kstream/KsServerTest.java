@@ -39,10 +39,11 @@ public class KsServerTest {
     public void storeMain() throws IOException {
         Map<String, Object> map = new HashMap<>(2);
         map.put("type", "main");
+        map.put("id", "5aefbd38284708");
         Map<String, String> value = new HashMap<>(3);
-        value.put("service_name", "test");
-        value.put("service_desc", "测试");
-        value.put("bootstrap_servers", "10.68.120.214:9092");
+        value.put("app_name", "test4");
+        value.put("app_desc", "test4");
+        value.put("ds_id", "5af0118126ac56");
         map.put("value", value);
         String param = KJson.writeValueAsString(map);
         HttpPost httpPost = new HttpPost("http://10.68.13.120:12583/cii/ks/storeApp");

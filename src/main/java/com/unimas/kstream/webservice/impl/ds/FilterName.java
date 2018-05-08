@@ -85,9 +85,8 @@ public class FilterName extends HttpServlet {
             result = mysqlOperator.exist(
                     "select ds_name from ciisource where ds_type=? and ds_name=?",
                     ds_type, ds_name);
-
         } catch (SQLException e) {
-            error = e.getMessage();
+            error = "名称查询出错[数据库错误]";
             logger.error(error, e);
         }
         OutputStream outputStream = resp.getOutputStream();

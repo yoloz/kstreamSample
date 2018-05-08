@@ -181,8 +181,8 @@ public class GetAppConf extends HttpServlet {
                 default:
                     error = "getApp=>type:" + type + " 不支持";
             }
-        } catch (SQLException e) {
-            error = "获取信息失败:" + e.getMessage();
+        } catch (SQLException|IOException e) {
+            error = "获取信息失败[数据库或IO异常]";
             logger.error(error, e);
         }
         OutputStream outputStream = resp.getOutputStream();

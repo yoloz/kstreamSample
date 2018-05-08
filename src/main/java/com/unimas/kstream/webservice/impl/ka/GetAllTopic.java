@@ -87,7 +87,7 @@ public class GetAllTopic extends HttpServlet {
         try {
             topics = KsServer.getKsKaClient().getAllTopics();
         } catch (Throwable e) {
-            error = e.getMessage();
+            error = "获取信息失败[scala-api]";
             logger.error(error, e);
         }
         OutputStream outputStream = resp.getOutputStream();

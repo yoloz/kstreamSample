@@ -1,4 +1,4 @@
-package com.unimas.kstream.webservice.impl.ds;
+package com.unimas.kstream.bean;
 
 public enum DSType {
 

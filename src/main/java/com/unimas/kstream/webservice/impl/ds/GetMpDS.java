@@ -89,7 +89,7 @@ public class GetMpDS extends HttpServlet {
                     new TypeToken<List<Map<String, String>>>() {
                     }.getType());
         } catch (SQLException e) {
-            error = e.getMessage();
+            error = "信息获取失败[数据库错误]";
             logger.error(error, e);
         }
         OutputStream outputStream = resp.getOutputStream();
