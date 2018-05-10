@@ -16,6 +16,7 @@ import java.nio.file.Path;
 import java.nio.file.attribute.FileTime;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.util.Map;
 
 /**
  * 后台每1分钟检查一次caches的运行状态是否正常及更新运行信息
@@ -44,6 +45,24 @@ public class RegularlyUpdate extends Thread {
                             File pf = KsServer.app_dir.resolve(id).resolve("pid").toFile();
                             switch (app.getStatus()) {
                                 case START:
+                                    if (pf.exists()) {
+                                        logger.info(id + " start success change status to run");
+                                        WSUtils.updateMysqlStatus(app.getId(), AppInfo.Status.RUN);
+                                        app.setStatus(AppInfo.Status.RUN);
+                                        try {
+                                            app.setPid(Files.readFirstLine(pf, Charset.forName("UTF-8")));
+                                        } catch (IOException e) {
+                                            logger.error("读取文件:" + pf.toString() + "失败", e);
+                                        }
+                                        app.setRuntime(getRunTime(id));
+                                    } else {
+                                        logger.warn(id + " start fail change status to stop");
+                                        WSUtils.updateMysqlStatus(app.getId(), AppInfo.Status.STOP);
+                                        app.setStatus(AppInfo.Status.STOP);
+                                        app.setPid("");
+                                        app.setRuntime("—");
+                                    }
+                                    break;
                                 case RUN:
                                     if (!pf.exists()) {
                                         logger.warn(id + " status " + app.getStatus().getValue() +
@@ -109,15 +128,18 @@ public class RegularlyUpdate extends Thread {
             String line;
             while ((line = buffR.readLine()) != null) {
                 String[] tops = line.split("\\s+");
-                KsServer.caches.values().forEach(s -> s.getAppInfoMap().forEach((k, app) -> {
-                    if (app.getPid().equals(tops[0])) {
-                        app.setCpu(tops[8]);
-                        app.setMem(tops[9]);
-                    } else if (app.getPid().equals(tops[1])) {
-                        app.setCpu(tops[9]);
-                        app.setMem(tops[10]);
-                    }
-                }));
+                KsServer.caches.values().forEach(s -> {
+                    Map<String, AppInfo> appInfoMap = s.getAppInfoMap();
+                    if (appInfoMap != null) appInfoMap.forEach((k, app) -> {
+                        if (app.getPid().equals(tops[0])) {
+                            app.setCpu(tops[8]);
+                            app.setMem(tops[9]);
+                        } else if (app.getPid().equals(tops[1])) {
+                            app.setCpu(tops[9]);
+                            app.setMem(tops[10]);
+                        }
+                    });
+                });
             }
         } catch (IOException e) {
             logger.error("fail to get " + pids + " info", e);

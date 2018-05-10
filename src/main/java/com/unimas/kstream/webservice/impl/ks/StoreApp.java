@@ -5,6 +5,7 @@ import com.unimas.kstream.bean.AppInfo;
 import com.unimas.kstream.bean.KJson;
 import com.unimas.kstream.bean.ObjectId;
 import com.unimas.kstream.bean.ServiceInfo;
+import com.unimas.kstream.error.KRunException;
 import com.unimas.kstream.webservice.MysqlOperator;
 import com.unimas.kstream.webservice.WSUtils;
 import org.slf4j.Logger;
@@ -111,6 +112,9 @@ public class StoreApp extends HttpServlet {
         } catch (SQLException | IOException e) {
             error = "保存失败[数据库或IO异常]";
             logger.error(error, e);
+        } catch (KRunException e) {
+            error = e.getMessage();
+            logger.error(error, e);
         }
         OutputStream outputStream = resp.getOutputStream();
         String result;
@@ -167,7 +171,7 @@ public class StoreApp extends HttpServlet {
             appInfo.setZkUrl(zk_url);
             appInfo.setStatus(AppInfo.Status.INIT);
             return app_id;
-        } else throw new IOException(error);
+        } else throw new KRunException(error);
     }
 
     private String storeInput(String app_id, Map<String, Object> value) throws IOException, SQLException {
@@ -188,7 +192,7 @@ public class StoreApp extends HttpServlet {
             }
             WSUtils.updateCacheStatus(app_id, AppInfo.Status.INIT);
             return input_id;
-        } else throw new IOException(error);
+        } else throw new KRunException(error);
     }
 
     private String storeOperation(String app_id, Map<String, Object> value) throws IOException, SQLException {
@@ -209,7 +213,7 @@ public class StoreApp extends HttpServlet {
             }
             WSUtils.updateCacheStatus(app_id, AppInfo.Status.INIT);
             return operation_id;
-        } else throw new IOException(error);
+        } else throw new KRunException(error);
     }
 
     private void storeOutput(String app_id, Map<String, Object> value) throws IOException, SQLException {
@@ -222,6 +226,6 @@ public class StoreApp extends HttpServlet {
                     "insert into ksoutput(app_id,output_json)values(?,?)",
                     app_id, KJson.writeValueAsString(value));
             WSUtils.updateCacheStatus(app_id, AppInfo.Status.INIT);
-        } else throw new IOException(error);
+        } else throw new KRunException(error);
     }
 }

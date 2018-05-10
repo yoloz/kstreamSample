@@ -51,7 +51,7 @@ public class StopProcess {
         ExportInputStream error = null;
         try {
             Process process = Runtime.getRuntime().exec(new String[]{"/bin/sh", "-c",
-                    "kill -15 " + pid});
+                    "kill -9 " + pid});
             String prefix = "pid=" + pid;
             info = new ExportInputStream(process.getInputStream(), logger,
                     ExportInputStream.Level.INFO, prefix);

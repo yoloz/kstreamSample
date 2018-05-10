@@ -3,7 +3,6 @@ package com.unimas.kstream.webservice.impl.ks;
 import com.unimas.kstream.KsServer;
 import com.unimas.kstream.bean.AppInfo;
 import com.unimas.kstream.bean.KJson;
-import com.unimas.kstream.bean.ServiceInfo;
 import com.unimas.kstream.webservice.MysqlOperator;
 import com.unimas.kstream.webservice.WSUtils;
 import org.slf4j.Logger;
@@ -14,16 +13,16 @@ import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Properties;
 
 public class DeployApp extends HttpServlet {
 
@@ -88,6 +87,7 @@ public class DeployApp extends HttpServlet {
         String error = WSUtils.unModify(null, app_id);
         if (error == null) {
             Path dir = KsServer.app_dir.resolve(app_id);
+            Files.walkFileTree(dir, new WSUtils.EmptyDir());
             if (Files.notExists(dir, LinkOption.NOFOLLOW_LINKS)) Files.createDirectory(dir);
             MysqlOperator mysqlOperator = KsServer.getMysqlOperator();
             try {
@@ -146,21 +146,21 @@ public class DeployApp extends HttpServlet {
     //type,json,other...
     @SuppressWarnings("unchecked")
     private void writeFile(Path path, String... param) throws IOException {
-        Properties properties = new Properties();
+        List<String> lines = new ArrayList<>();
         switch (param[0]) {
             case "main":
                 Map<String, String> ma = KJson.readStringValue(param[1]);
-                properties.put("application.id", param[2]);
-                properties.put("application.name", param[3]);
-                properties.put("ks.source", param[4]);
-                properties.put("ks.operation", param[5]);
-                properties.put("ks.output", "output");
-                ma.forEach((k, v) -> properties.put(k.replaceAll("_", "."), v == null ? "" : v));
+                lines.add("application.id=" + param[2]);
+                lines.add("application.name=" + param[3]);
+                lines.add("ks.source=" + param[4]);
+                lines.add("ks.operation=" + param[5]);
+                lines.add("ks.output=output");
+                ma.forEach((k, v) -> lines.add(k.replaceAll("_", ".") + "=" + (v == null ? "" : v)));
                 break;
             case "input":
                 Map<String, String> in = KJson.readStringValue(param[1]);
-                properties.put("ks.name", param[2]);
-                in.forEach((k, v) -> properties.put(k.replaceAll("_", "."), v == null ? "" : v));
+                lines.add("ks.name=" + param[2]);
+                in.forEach((k, v) -> lines.add(k.replaceAll("_", ".") + "=" + (v == null ? "" : v)));
                 break;
             case "output":
                 Map<String, Object> out = KJson.readValue(param[1]);
@@ -175,17 +175,14 @@ public class DeployApp extends HttpServlet {
                         }
                         value = builder.toString();
                     } else value = v == null ? "" : String.valueOf(v);
-                    properties.put(k.replaceAll("_", "."), value == null ? "" : value);
+                    lines.add(k.replaceAll("_", ".") + "=" + (value == null ? "" : value));
                 });
                 break;
             default:
                 Map<String, String> m = KJson.readStringValue(param[1]);
-                m.forEach((k, v) -> properties.put(k.replaceAll("_", "."), v == null ? "" : v));
+                m.forEach((k, v) -> lines.add(k.replaceAll("_", ".") + "=" + (v == null ? "" : v)));
                 break;
         }
-        try (FileOutputStream output = new FileOutputStream(path.toFile())) {
-            properties.store(output, null);
-        }
+        Files.write(path, lines, Charset.forName("utf-8"));
     }
-
 }

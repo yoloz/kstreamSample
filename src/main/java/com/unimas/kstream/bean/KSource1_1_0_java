@@ -1,0 +1,138 @@
+package com.unimas.kstream.bean;
+
+import com.google.common.base.Optional;
+import com.unimas.kstream.error.KConfigException;
+import com.unimas.kstream.process.KUtils;
+import org.apache.kafka.common.serialization.Serdes;
+import org.apache.kafka.streams.Consumed;
+import org.apache.kafka.streams.StreamsBuilder;
+import org.apache.kafka.streams.kstream.KStream;
+import org.apache.kafka.streams.kstream.KTable;
+import org.apache.kafka.streams.kstream.Materialized;
+
+import java.util.Properties;
+
+/**
+ * ks.name kSource名称
+ * <p>
+ * ks.type kSource类型(stream,table),默认stream
+ * <p>
+ * ks.topics partition等属性一致的一类topic,暂时单个
+ * <p>
+ * ks.table.store type是table时,提供自定义的storeName
+ * <p>
+ * ks.time.name 事件时间字段,默认kafka record的timestamp.
+ * <p>
+ * ks.time.type 时间值类型long或string(string需要配置format)
+ * <p>
+ * ks.time.format 时间值的字符串格式
+ * <p>
+ * ks.time.lang 时间值值的语言,默认en
+ * <p>
+ * ks.time.offsetId 时间值的时区,默认东八区
+ */
+public class KSource1_1_0 implements KUtils {
+
+    /**
+     * configuration definition
+     */
+    private enum CONFIG {
+        KS_NAME("ks.name"), KS_TYPE("ks.type"), KS_TOPICS("ks.topics"), KS_TABLE_STORE("ks.table.store"),
+        KS_TIME_NAME("ks.time.name"), KS_TIME_TYPE("ks.time.type"), KS_TIME_FORMAT("ks.time.format"),
+        KS_TIME_LANG("ks.time.lang"), KS_TIME_OFFSET_ID("ks.time.offsetId");
+        private String value;
+
+        CONFIG(String value) {
+            this.value = value;
+        }
+
+        public String getValue() {
+            return value;
+        }
+    }
+
+    private final String ksName;
+    private final String ksType;
+    private final String ksTopics;
+    private final String ksTableStore;
+    private final String ksTimeName;
+    private final String ksTimeType;
+    private final String ksTimeFormat;
+    private final String ksTimeLang;
+    private final String ksTimeOffsetId;
+    //    private final KStreamBuilder kStreamBuilder;
+    private final StreamsBuilder kStreamBuilder;
+
+    //    public KSource(Properties properties, KStreamBuilder kStreamBuilder) {
+//        this.kStreamBuilder = kStreamBuilder;
+//        this.ksName = nonNullEmpty(properties, CONFIG.KS_NAME.getValue());
+//        this.ksType = nonNullEmpty(properties, CONFIG.KS_TYPE.getValue());
+//        String _tableStore = properties.getProperty(CONFIG.KS_TABLE_STORE.getValue());
+//        this.ksTableStore = isNullOrEmpty(_tableStore) ? null : _tableStore;
+//        this.ksTopics = nonNullEmpty(properties, CONFIG.KS_TOPICS.getValue());
+//        this.ksTimeName = properties.getProperty(CONFIG.KS_TIME_NAME.getValue());
+//        this.ksTimeType = isNullOrEmpty(this.ksTimeName) ?
+//                properties.getProperty(CONFIG.KS_TIME_TYPE.getValue()) :
+//                nonNullEmpty(properties, CONFIG.KS_TIME_TYPE.getValue());
+//        if (!isNullOrEmpty(this.ksTimeType) &&
+//                KTime.Type.STRING.getValue().equals(this.ksTimeType)) {
+//            this.ksTimeFormat = nonNullEmpty(properties, CONFIG.KS_TIME_FORMAT.getValue());
+//        } else this.ksTimeFormat = properties.getProperty(CONFIG.KS_TIME_FORMAT.getValue());
+//        this.ksTimeLang = properties.getProperty(CONFIG.KS_TIME_LANG.getValue());
+//        this.ksTimeOffsetId = properties.getProperty(CONFIG.KS_TIME_OFFSET_ID.getValue());
+//    }
+    public KSource1_1_0(Properties properties, StreamsBuilder kStreamBuilder) {
+        this.kStreamBuilder = kStreamBuilder;
+        this.ksName = nonNullEmpty(properties, CONFIG.KS_NAME.getValue());
+        this.ksType = nonNullEmpty(properties, CONFIG.KS_TYPE.getValue());
+        String _tableStore = properties.getProperty(CONFIG.KS_TABLE_STORE.getValue());
+        this.ksTableStore = isNullOrEmpty(_tableStore) ? null : _tableStore;
+        this.ksTopics = nonNullEmpty(properties, CONFIG.KS_TOPICS.getValue());
+        this.ksTimeName = properties.getProperty(CONFIG.KS_TIME_NAME.getValue());
+        this.ksTimeType = isNullOrEmpty(this.ksTimeName) ?
+                properties.getProperty(CONFIG.KS_TIME_TYPE.getValue()) :
+                nonNullEmpty(properties, CONFIG.KS_TIME_TYPE.getValue());
+        if (!isNullOrEmpty(this.ksTimeType) &&
+                KTime.Type.STRING.getValue().equals(this.ksTimeType)) {
+            this.ksTimeFormat = nonNullEmpty(properties, CONFIG.KS_TIME_FORMAT.getValue());
+        } else this.ksTimeFormat = properties.getProperty(CONFIG.KS_TIME_FORMAT.getValue());
+        this.ksTimeLang = properties.getProperty(CONFIG.KS_TIME_LANG.getValue());
+        this.ksTimeOffsetId = properties.getProperty(CONFIG.KS_TIME_OFFSET_ID.getValue());
+    }
+
+    /**
+     * get kStream or kTable
+     *
+     * @return kStream, kTable {@link KStream,KTable}
+     */
+    public Object source() {
+        Optional<KTime> eventTime = new KTime.Builder()
+                .name(ksTimeName).type(ksTimeType).format(ksTimeFormat).lang(ksTimeLang).offsetId(ksTimeOffsetId)
+                .build();
+        switch (ksType) {
+            case "table":
+                if (eventTime.isPresent()) {
+                    return kStreamBuilder.table(ksTopics,
+                            Consumed.with(Serdes.String(), Serdes.String())
+                                    .withTimestampExtractor(new KTimestampExtractor(eventTime.get())),
+                            Materialized.as(ksTableStore));
+                } else return kStreamBuilder.table(ksTopics, Materialized.as(ksTableStore));
+            case "stream":
+                if (eventTime.isPresent()) {
+                    return kStreamBuilder.stream(ksTopics, Consumed.with(Serdes.String(), Serdes.String())
+                            .withTimestampExtractor(new KTimestampExtractor(eventTime.get())));
+                } else return kStreamBuilder.stream(ksTopics);
+            default:
+                throw new KConfigException(concat(" ", "kSource type'", ksType, "'not support..."));
+        }
+    }
+
+    /**
+     * kSource name
+     *
+     * @return ksName
+     */
+    public String getKsName() {
+        return ksName;
+    }
+}

@@ -1,13 +1,15 @@
 package com.unimas.kstream.process.operation;
 
-import com.unimas.kstream.process.KUtils;
 import com.unimas.kstream.error.KConfigException;
+import com.unimas.kstream.process.KUtils;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.KeyValue;
 import org.apache.kafka.streams.kstream.KStream;
 import org.apache.kafka.streams.kstream.KTable;
 import org.apache.kafka.streams.kstream.KeyValueMapper;
+import org.apache.kafka.streams.kstream.Materialized;
 import org.apache.kafka.streams.kstream.Predicate;
+import org.apache.kafka.streams.kstream.Produced;
 import org.apache.kafka.streams.kstream.ValueMapper;
 
 import java.util.Map;
@@ -22,7 +24,7 @@ import java.util.Properties;
  * table-table建议配置
  * stream-stream,stream-table不需要这个配置
  */
-public abstract class Operation implements KUtils {
+public abstract class Operation1_1_0 implements KUtils {
 
     public final static String operator = "operation.operator";
     public final static String operatorKS = "operation.ks.name";
@@ -32,7 +34,7 @@ public abstract class Operation implements KUtils {
     final String tableStoreName;
 
 
-    Operation(Properties properties) {
+    Operation1_1_0(Properties properties) {
         this._operator = nonNullEmpty(properties, operator);
         this.kSourceName = nonNullEmpty(properties, operatorKS);
         this.tableStoreName = properties.getProperty("operation.table.store", "");
@@ -44,9 +46,9 @@ public abstract class Operation implements KUtils {
      *
      * @param target operator
      * @param conf   operation configuration
-     * @return operation {@link Operation}
+     * @return operation {@link Operation1_1_0}
      */
-    public static Operation getImpl(String target, Properties conf) {
+    public static Operation1_1_0 getImpl(String target, Properties conf) {
         switch (target) {
             case "filter":
                 return new FilterImpl(conf);
@@ -78,7 +80,9 @@ public abstract class Operation implements KUtils {
     Object mapValues(Object object, ValueMapper<String, String> valueMapper) {
         if (object instanceof KTable) {
             if (!tableStoreName.isEmpty()) {
-                return ((KTable<String, String>) object).mapValues(valueMapper, Serdes.String(), tableStoreName);
+                return ((KTable<String, String>) object).mapValues(valueMapper, Materialized
+                        .as(tableStoreName));
+//                        .withValueSerde(Serdes.String()));
             } else return ((KTable<String, String>) object).mapValues(valueMapper);
         } else return ((KStream<String, String>) object).mapValues(valueMapper);
     }
@@ -109,7 +113,9 @@ public abstract class Operation implements KUtils {
     Object through(Object object, String throughTopic) {
         if (object instanceof KTable)
             return ((KTable<String, String>) object).through(Serdes.String(), Serdes.String(), throughTopic);
-        else return ((KStream<String, String>) object).through(Serdes.String(), Serdes.String(), throughTopic);
+//            throw new KRunException("不支持运行中table through操作!");
+        else
+            return ((KStream<String, String>) object).through(throughTopic, Produced.with(Serdes.String(), Serdes.String()));
     }
 
     /**
@@ -123,7 +129,7 @@ public abstract class Operation implements KUtils {
     Object filter(Object object, Predicate<String, String> predicate) {
         if (object instanceof KTable) {
             if (!tableStoreName.isEmpty()) {
-                return ((KTable<String, String>) object).filter(predicate, tableStoreName);
+                return ((KTable<String, String>) object).filter(predicate, Materialized.as(tableStoreName));
             } else return ((KTable<String, String>) object).filter(predicate);
         } else return ((KStream<String, String>) object).filter(predicate);
     }
