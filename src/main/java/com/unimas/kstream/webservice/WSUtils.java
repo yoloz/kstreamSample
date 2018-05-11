@@ -57,7 +57,7 @@ public class WSUtils {
     public static void updateCacheStatus(String app_id, AppInfo.Status status) {
         for (ServiceInfo serviceInfo : KsServer.caches.values()) {
             Map<String, AppInfo> appInfoMap = serviceInfo.getAppInfoMap();
-            if (appInfoMap.containsKey(app_id)) {
+            if (appInfoMap != null && appInfoMap.containsKey(app_id)) {
                 appInfoMap.get(app_id).setStatus(status);
                 break;
             }

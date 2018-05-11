@@ -3,6 +3,7 @@ package com.unimas.kstream.webservice.impl.ka;
 import com.google.common.collect.ImmutableMap;
 import com.google.gson.reflect.TypeToken;
 import com.unimas.kstream.KsServer;
+import com.unimas.kstream.bean.AppInfo;
 import com.unimas.kstream.bean.KJson;
 import com.unimas.kstream.bean.ObjectId;
 import com.unimas.kstream.webservice.MysqlOperator;
@@ -111,6 +112,14 @@ public class SetAddr extends HttpServlet {
                                 ds_id, kds_name, 0, KJson.writeValue(ds_jsonM, new TypeToken<Map<String, String>>() {
                                 }.getType()));
                     } else {
+                        List<Map<String, String>> app_ids = mysqlOperator.query("select app_id from ksapp where ds_id=?", ds_id);
+                        if (!app_ids.isEmpty()) {
+                            app_ids.forEach(m -> {
+                                String app_id = m.get("app_id");
+                                WSUtils.updateMysqlStatus(app_id, AppInfo.Status.INIT);
+                                WSUtils.updateCacheStatus(app_id, AppInfo.Status.INIT);
+                            });
+                        }
                         mysqlOperator.update(null, null,
                                 "update ciisource set ds_name=?,ds_type=?,ds_json=? where ds_id=?",
                                 kds_name, 0, KJson.writeValue(ds_jsonM, new TypeToken<Map<String, String>>() {
