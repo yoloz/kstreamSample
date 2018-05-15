@@ -11,6 +11,7 @@ import scala.collection.JavaConversions;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 
 //import static org.junit.Assert.*;
 
@@ -30,7 +31,7 @@ public class KsKaClientTest {
 
     @Test
     public void deleteTopic() {
-        client.deleteTopic("123");
+        client.deleteTopic("test3", false);
     }
 
     @Test
@@ -46,7 +47,7 @@ public class KsKaClientTest {
                 new TypeToken<List<Map<String, String>>>() {
                 }.getType()));
         try {
-            Thread.sleep(2*60*1000);
+            Thread.sleep(2 * 60 * 1000);
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
@@ -67,4 +68,10 @@ public class KsKaClientTest {
                 new TypeToken<Map<Integer, String>>() {
                 }.getType()));
     }
+
+    @Test
+    public void createTopic() throws Exception {
+        client.createTopic("test3", 1, 1, new Properties(), true);
+    }
+
 }

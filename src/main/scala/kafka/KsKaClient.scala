@@ -1,8 +1,9 @@
 package kafka
 
 import java.util
+import java.util.Properties
 
-import kafka.admin.{AdminOperationException, AdminUtils}
+import kafka.admin.{AdminOperationException, AdminUtils, RackAwareMode}
 import kafka.server.ConfigType
 import kafka.utils.ZkUtils
 import kafka.utils.ZkUtils.getDeleteTopicPath
@@ -102,8 +103,9 @@ class KsKaClient private(client: ZkUtils) {
     b.toString
   }
 
-  def deleteTopic(prefix: String) {
-    val topics = getTopics.filter(t => t.startsWith(prefix))
+  def deleteTopic(topic: String, isPrefix: Boolean = false) {
+    val topics = if (isPrefix) getTopics.filter(t => t.startsWith(topic)) else
+      getTopics.filter(t => t.contentEquals(topic))
     if (topics.isEmpty) logger.warn("there is no topics to delete")
     else topics.foreach { topic =>
       try {
@@ -119,6 +121,28 @@ class KsKaClient private(client: ZkUtils) {
           throw new AdminOperationException("Error while deleting topic %s".format(topic))
       }
     }
+  }
+
+  //  cleanup.policy
+  //  compression.type
+  //  delete.retention.ms
+  //  file.delete.delay.ms
+  //  max.message.bytes
+  //  min.cleanable.dirty.ratio
+  //  min.compaction.lag.ms
+  //  min.insync.replicas
+  //  retention.bytes
+  //  retention.ms
+  //  segment.bytes
+  //  segment.index.bytes
+  //  segment.jitter.ms
+  //  segment.ms
+  //  unclean.leader.election.enable
+
+  def createTopic(topic: String, partition: Int = 1, replica: Int = 1, configs: Properties,
+                  rackAware: Boolean = true) {
+    val rackAwareMode = if (rackAware) RackAwareMode.Disabled else RackAwareMode.Enforced
+    AdminUtils.createTopic(client, topic, partition, replica, configs, rackAwareMode)
   }
 
   def close(): Unit = client.close()

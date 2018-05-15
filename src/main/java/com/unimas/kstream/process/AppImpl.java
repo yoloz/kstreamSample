@@ -210,7 +210,7 @@ public class AppImpl extends Thread implements KUtils {
         if (!isNullOrEmpty(testAppId) && !isNullOrEmpty(mainProperties.getProperty(zkUrls))) {
             KsKaClient client = KsKaClient.apply(mainProperties.getProperty(zkUrls));
             try {
-                client.deleteTopic(testAppId);
+                client.deleteTopic(testAppId,true);
             } catch (Throwable e) {
                 logger.error("delete topics error", e);
             }
