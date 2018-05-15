@@ -234,13 +234,13 @@ public class KsServer {
     }
 
     public static KaJMX getKaJMX() {
-        if (kaJMX == null) throw new KRunException("JMX连接为空");
+        if (kaJMX == null) throw new KRunException("jmx地址为空");
         return kaJMX;
     }
 
 
     public static KsKaClient getKsKaClient() {
-        if (ksKaClient == null) throw new KRunException("ZK连接为空");
+        if (ksKaClient == null) throw new KRunException("zookeeper地址为空");
         return ksKaClient;
     }
 

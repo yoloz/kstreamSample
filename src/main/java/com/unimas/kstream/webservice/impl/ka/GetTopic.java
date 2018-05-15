@@ -4,6 +4,7 @@ import com.google.gson.reflect.TypeToken;
 import com.unimas.kstream.KsServer;
 import com.unimas.kstream.bean.KJson;
 import com.unimas.kstream.webservice.WSUtils;
+import kafka.KsKaClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -79,10 +80,17 @@ public class GetTopic extends HttpServlet {
         String topic = bodyObj.get("topic");
         List<Map<String, String>> details = null;
         String error = null;
+        KsKaClient client = null;
         try {
-            details = KsServer.getKsKaClient().getTopicDetail(topic);
+            client = KsServer.getKsKaClient();
         } catch (Throwable e) {
-            error = "获取信息失败[scala-api]";
+            error = e.getMessage();
+            logger.error(error, e);
+        }
+        if (error == null && client != null) try {
+            details = client.getTopicDetail(topic);
+        } catch (Throwable e) {
+            error = "请检查zookeeper地址端口是否正确";
             logger.error(error, e);
         }
         OutputStream outputStream = resp.getOutputStream();

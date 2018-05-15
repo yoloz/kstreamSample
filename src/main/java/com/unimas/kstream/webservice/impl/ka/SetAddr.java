@@ -95,17 +95,25 @@ public class SetAddr extends HttpServlet {
             else if (list.size() == 1) ds_id = list.get(0).get("ds_id");
             else error = "数据源中存在多个名称[平台kafka]记录";
             if (error == null) {
-                try {
+                if (kaUrl == null || kaUrl.isEmpty()) error = "kafka地址为空";
+                if (error == null) try {
                     if (jmxUrl != null && !jmxUrl.isEmpty()) KsServer.setKaJMX(jmxUrl);
-                    if (zkUrl != null && !zkUrl.isEmpty()) KsServer.setKsKaClient(zkUrl);
+                    else error = "jmx地址为空";
                 } catch (Throwable e) {
-                    error = "设置平台环境出错[scala-api]";
+                    error = "jmx地址连接失败,请检查地址和端口";
+                    logger.error(error, e);
+                }
+                if (error == null) try {
+                    if (zkUrl != null && !zkUrl.isEmpty()) KsServer.setKsKaClient(zkUrl);
+                    else error = "zookeeper地址为空";
+                } catch (Throwable e) {
+                    error = "zookeeper地址连接失败,请检查地址和端口";
                     logger.error(error, e);
                 }
                 if (error == null) {
                     KsServer.overWrite(zkUrl, jmxUrl);
-                    Map<String, String> ds_jsonM = ImmutableMap.of("kafka_url", kaUrl == null ? "" : kaUrl,
-                            "zk_url", zkUrl == null ? "" : zkUrl, "jmx_url", jmxUrl == null ? "" : jmxUrl);
+                    Map<String, String> ds_jsonM = ImmutableMap.of("kafka_url", kaUrl,
+                            "zk_url", zkUrl, "jmx_url", jmxUrl);
                     if (list.isEmpty()) {
                         mysqlOperator.fixUpdate(
                                 "insert into ciisource(ds_id,ds_name,ds_type,ds_json)values(?,?,?,?)",

@@ -83,30 +83,38 @@ public class GetTopics extends HttpServlet {
         String app_id = bodyObj.get("app_id");
         String zkUrl = null;
         String error = null;
+        String app_name = "";
         for (ServiceInfo serviceInfo : KsServer.caches.values()) {
             Map<String, AppInfo> appInfoMap = serviceInfo.getAppInfoMap();
             if (appInfoMap.containsKey(app_id)) {
-                zkUrl = appInfoMap.get(app_id).getZkUrl();
+                AppInfo appInfo = appInfoMap.get(app_id);
+                app_name = appInfo.getName();
+                zkUrl = appInfo.getZkUrl();
                 break;
             }
         }
         String results = "[]";
-        if (zkUrl != null) {
+        if (zkUrl != null && !zkUrl.isEmpty()) {
             KsKaClient client = null;
             try {
                 client = KsKaClient.apply(zkUrl);
+            } catch (Throwable e) {
+                error = "zookeeper[" + zkUrl + "]连接失败";
+                logger.error(error, e);
+            }
+            if (error == null) try {
                 List<String> topics = JavaConversions.seqAsJavaList(client.getTopics());
                 results = KJson.writeValue(topics,
                         new TypeToken<List<String>>() {
                         }.getType());
 
             } catch (Throwable e) {
-                error = "获取数据失败[scala-api或IO异常]";
+                error = "获取数据失败[IO异常]";
                 logger.error(error, e);
             } finally {
                 if (client != null) client.close();
             }
-        } else error = "未找到任务的zookeeper地址";
+        } else error = "任务[" + app_name + "]的zookeeper地址为空";
 
         OutputStream outputStream = resp.getOutputStream();
         if (error == null) {

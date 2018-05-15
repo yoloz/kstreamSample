@@ -2,6 +2,7 @@ package com.unimas.kstream.webservice.impl.ka;
 
 import com.unimas.kstream.KsServer;
 import com.unimas.kstream.bean.KJson;
+import com.unimas.kstream.kafka.KaJMX;
 import com.unimas.kstream.webservice.WSUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -77,10 +78,17 @@ public class LogEndOffset extends HttpServlet {
         String topic = bodyObj.get("topic");
         Map<String, Object> offsets = null;
         String error = null;
+        KaJMX client = null;
         try {
-            offsets = KsServer.getKaJMX().getLogEndOffset(topic);
+            client = KsServer.getKaJMX();
         } catch (Throwable e) {
-            error = "获取信息失败[scala-api]";
+            error = e.getMessage();
+            logger.error(error, e);
+        }
+        if (error == null && client != null) try {
+            offsets = client.getLogEndOffset(topic);
+        } catch (Throwable e) {
+            error = "请检查jmx地址端口是否正确";
             logger.error(error, e);
         }
         OutputStream outputStream = resp.getOutputStream();
