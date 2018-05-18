@@ -87,8 +87,8 @@ public class DeployApp extends HttpServlet {
         String error = WSUtils.unModify(null, app_id);
         if (error == null) {
             Path dir = KsServer.app_dir.resolve(app_id);
-            Files.walkFileTree(dir, new WSUtils.EmptyDir());
-            if (Files.notExists(dir, LinkOption.NOFOLLOW_LINKS)) Files.createDirectory(dir);
+            if (Files.exists(dir, LinkOption.NOFOLLOW_LINKS)) Files.walkFileTree(dir, new WSUtils.EmptyDir());
+            Files.createDirectory(dir);
             MysqlOperator mysqlOperator = KsServer.getMysqlOperator();
             try {
                 StringBuilder input_ids = new StringBuilder();
@@ -155,12 +155,12 @@ public class DeployApp extends HttpServlet {
                 lines.add("ks.source=" + param[4]);
                 lines.add("ks.operation=" + param[5]);
                 lines.add("ks.output=output");
-                ma.forEach((k, v) -> lines.add(k.replaceAll("_", ".") + "=" + (v == null ? "" : v)));
+                ma.forEach((k, v) -> lines.add(k.replaceAll("_", ".").trim() + "=" + (v == null ? "" : v)));
                 break;
             case "input":
                 Map<String, String> in = KJson.readStringValue(param[1]);
                 lines.add("ks.name=" + param[2]);
-                in.forEach((k, v) -> lines.add(k.replaceAll("_", ".") + "=" + (v == null ? "" : v)));
+                in.forEach((k, v) -> lines.add(k.replaceAll("_", ".").trim() + "=" + (v == null ? "" : v)));
                 break;
             case "output":
                 Map<String, Object> out = KJson.readValue(param[1]);
@@ -175,12 +175,12 @@ public class DeployApp extends HttpServlet {
                         }
                         value = builder.toString();
                     } else value = v == null ? "" : String.valueOf(v);
-                    lines.add(k.replaceAll("_", ".") + "=" + (value == null ? "" : value));
+                    lines.add(k.replaceAll("_", ".").trim() + "=" + (value == null ? "" : value));
                 });
                 break;
             default:
                 Map<String, String> m = KJson.readStringValue(param[1]);
-                m.forEach((k, v) -> lines.add(k.replaceAll("_", ".") + "=" + (v == null ? "" : v)));
+                m.forEach((k, v) -> lines.add(k.replaceAll("_", ".").trim() + "=" + (v == null ? "" : v)));
                 break;
         }
         Files.write(path, lines, Charset.forName("utf-8"));

@@ -30,9 +30,13 @@ public class KaJMX {
         ImmutableMap.Builder<String, Object> map = new ImmutableMap.Builder<>();
         ObjectName objectName = new ObjectName("kafka.log:type=Log,name=LogEndOffset,topic=" + topic + ",partition=*");
         Set<ObjectName> objectNames = context.queryNames(objectName, null);
+        long total = 0;
         for (ObjectName obj : objectNames) {
-            map.put(obj.getKeyProperty("partition"), context.getAttribute(new ObjectName(obj.getCanonicalName()), "Value"));
+            long count = (long) context.getAttribute(new ObjectName(obj.getCanonicalName()), "Value");
+            map.put(obj.getKeyProperty("partition"), count);
+            total += count;
         }
+        map.put("total", total);
         return map.build();
     }
 

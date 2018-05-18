@@ -86,7 +86,7 @@ public class GetTopics extends HttpServlet {
         String app_name = "";
         for (ServiceInfo serviceInfo : KsServer.caches.values()) {
             Map<String, AppInfo> appInfoMap = serviceInfo.getAppInfoMap();
-            if (appInfoMap.containsKey(app_id)) {
+            if (appInfoMap != null && appInfoMap.containsKey(app_id)) {
                 AppInfo appInfo = appInfoMap.get(app_id);
                 app_name = appInfo.getName();
                 zkUrl = appInfo.getZkUrl();
