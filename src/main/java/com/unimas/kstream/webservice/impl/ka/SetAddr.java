@@ -88,7 +88,7 @@ public class SetAddr extends HttpServlet {
         String ds_id = "";
         MysqlOperator mysqlOperator = KsServer.getMysqlOperator();
         try {
-            String kds_name = "平台kafka";
+            String kds_name = "平台KAFKA";
             List<Map<String, String>> list = mysqlOperator.query("select ds_id from ciisource where ds_name=?",
                     kds_name);
             if (list.isEmpty()) ds_id = ObjectId.get().toString();
