@@ -2,6 +2,7 @@ package com.unimas.kstream;
 
 import com.unimas.kstream.bean.KJson;
 import org.apache.http.StatusLine;
+import org.apache.http.client.methods.HttpGet;
 import org.apache.http.entity.StringEntity;
 import org.junit.After;
 import org.junit.Before;
@@ -104,6 +105,13 @@ public class KsServerTest {
         HttpPost httpPost = new HttpPost("http://10.68.13.120:12583/cii/ks/getAppConf");
         httpPost.setEntity(new StringEntity(param, Charset.forName("utf-8")));
         try (CloseableHttpResponse response = httpClient.execute(httpPost)) {
+            outPutResult(response);
+        }
+    }
+    @Test
+    public void getLocalIp() throws IOException {
+        HttpGet httpGet = new HttpGet("http://10.68.13.120:12583/cii/ka/getLocalIp");
+        try (CloseableHttpResponse response = httpClient.execute(httpGet)) {
             outPutResult(response);
         }
     }

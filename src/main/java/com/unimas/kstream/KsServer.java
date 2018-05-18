@@ -9,6 +9,7 @@ import com.unimas.kstream.webservice.WSUtils;
 import com.unimas.kstream.webservice.impl.ds.DeleteDS;
 import com.unimas.kstream.webservice.impl.ds.GetDS;
 import com.unimas.kstream.webservice.impl.ka.GetAddr;
+import com.unimas.kstream.webservice.impl.ka.GetLocalIp;
 import kafka.KsKaClient;
 import com.unimas.kstream.webservice.RegularlyUpdate;
 import com.unimas.kstream.webservice.MysqlOperator;
@@ -118,6 +119,7 @@ public class KsServer {
         servletHandler.addServletWithMapping(GetAllTopic.class, "/cii/ka/getAllTopic");
         servletHandler.addServletWithMapping(GetTopic.class, "/cii/ka/getTopic");
         servletHandler.addServletWithMapping(LogEndOffset.class, "/cii/ka/logEndOffset");
+        servletHandler.addServletWithMapping(GetLocalIp.class, "/cii/ka/getLocalIp");
 
         servletHandler.addServletWithMapping(GetAllDS.class, "/cii/ds/getAllDS");
         servletHandler.addServletWithMapping(GetMpDS.class, "/cii/ds/getMpDS");
