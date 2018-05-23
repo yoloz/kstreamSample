@@ -3,8 +3,8 @@ package com.unimas.kstream.webservice.impl.ka;
 import com.google.gson.reflect.TypeToken;
 import com.unimas.kstream.KsServer;
 import com.unimas.kstream.bean.KJson;
+import com.unimas.kstream.kafka.KskaClient;
 import com.unimas.kstream.webservice.WSUtils;
-import kafka.KsKaClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -85,7 +85,7 @@ public class GetAllTopic extends HttpServlet {
         logger.debug("getAllTopic==>" + body);
         List<Map<String, String>> topics = null;
         String error = null;
-        KsKaClient client = null;
+        KskaClient client = null;
         try {
             client = KsServer.getKsKaClient();
         } catch (Throwable e) {

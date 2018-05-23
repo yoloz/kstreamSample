@@ -5,11 +5,10 @@ import com.unimas.kstream.KsServer;
 import com.unimas.kstream.bean.AppInfo;
 import com.unimas.kstream.bean.KJson;
 import com.unimas.kstream.bean.ServiceInfo;
-import kafka.KsKaClient;
+import com.unimas.kstream.kafka.KskaClient;
 import com.unimas.kstream.webservice.WSUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import scala.collection.JavaConversions;
 
 import javax.servlet.ServletOutputStream;
 import javax.servlet.ServletResponse;
@@ -95,15 +94,15 @@ public class GetTopics extends HttpServlet {
         }
         String results = "[]";
         if (zkUrl != null && !zkUrl.isEmpty()) {
-            KsKaClient client = null;
+            KskaClient client = null;
             try {
-                client = KsKaClient.apply(zkUrl);
+                client = new KskaClient(zkUrl);
             } catch (Throwable e) {
                 error = "zookeeper[" + zkUrl + "]连接失败";
                 logger.error(error, e);
             }
             if (error == null) try {
-                List<String> topics = JavaConversions.seqAsJavaList(client.getTopics());
+                List<String> topics = client.getTopics();
                 results = KJson.writeValue(topics,
                         new TypeToken<List<String>>() {
                         }.getType());
@@ -112,7 +111,7 @@ public class GetTopics extends HttpServlet {
                 error = "获取数据失败[IO异常]";
                 logger.error(error, e);
             } finally {
-                if (client != null) client.close();
+                client.close();
             }
         } else error = "任务[" + app_name + "]的zookeeper地址为空";
 

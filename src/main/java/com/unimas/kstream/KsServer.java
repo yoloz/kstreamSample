@@ -5,12 +5,13 @@ import com.unimas.kstream.bean.AppInfo;
 import com.unimas.kstream.bean.ServiceInfo;
 import com.unimas.kstream.error.KRunException;
 import com.unimas.kstream.kafka.KaJMX;
+import com.unimas.kstream.kafka.KskaClient;
 import com.unimas.kstream.webservice.WSUtils;
 import com.unimas.kstream.webservice.impl.ds.DeleteDS;
 import com.unimas.kstream.webservice.impl.ds.GetDS;
 import com.unimas.kstream.webservice.impl.ka.GetAddr;
 import com.unimas.kstream.webservice.impl.ka.GetLocalIp;
-import kafka.KsKaClient;
+import com.unimas.kstream.webservice.impl.ks.UDFile;
 import com.unimas.kstream.webservice.RegularlyUpdate;
 import com.unimas.kstream.webservice.MysqlOperator;
 import com.unimas.kstream.webservice.impl.ds.FilterName;
@@ -67,11 +68,15 @@ public class KsServer {
     private static final String root_dir = System.getProperty("ks.root.dir");
     public static final Path app_dir = Paths.get(root_dir, "app");
     public static final Path bin_dir = Paths.get(root_dir, "bin");
+    public static final Path upload_dir = Paths.get(root_dir, "upload");
+    public static final Path download_dir = Paths.get(root_dir, "download");
     public static final ConcurrentHashMap<String, ServiceInfo> caches = new ConcurrentHashMap<>();
+
+    public static String wfUrl;
 
     private static MysqlOperator mysqlOperator = null;
     private static KaJMX kaJMX = null;
-    private static KsKaClient ksKaClient = null;
+    private static KskaClient ksKaClient = null;
     private final int port;
     private Server server;
 
@@ -85,12 +90,13 @@ public class KsServer {
                 p.load(reader);
             }
             this.port = Integer.parseInt(p.getProperty("port"));
+            wfUrl = p.getProperty("wf.url", "http://localhost:7914");
             mysqlOperator = new MysqlOperator(p);
             String jmxUrl = p.getProperty("jmx.url");
             if (jmxUrl != null && !jmxUrl.isEmpty()) kaJMX = new KaJMX(jmxUrl);
             else logger.warn("===============kafka jmx url undefined===============");
             String zkUrl = p.getProperty("zk.url");
-            if (zkUrl != null && !zkUrl.isEmpty()) ksKaClient = KsKaClient.apply(zkUrl);
+            if (zkUrl != null && !zkUrl.isEmpty()) ksKaClient = new KskaClient(zkUrl);
             else logger.warn("===============zookeeper url undefined===============");
             if (Files.notExists(app_dir, LinkOption.NOFOLLOW_LINKS)) Files.createDirectory(app_dir);
         } else {
@@ -113,6 +119,7 @@ public class KsServer {
         servletHandler.addServletWithMapping(GetAppConf.class, "/cii/ks/getAppConf");
         servletHandler.addServletWithMapping(GetAllApp.class, "/cii/ks/getAllApp");
         servletHandler.addServletWithMapping(GetTopics.class, "/cii/ks/getTopics");
+        servletHandler.addServletWithMapping(UDFile.class, "/cii/ks/udFile");
 
         servletHandler.addServletWithMapping(SetAddr.class, "/cii/ka/setAddr");
         servletHandler.addServletWithMapping(GetAddr.class, "/cii/ka/getAddr");
@@ -241,7 +248,7 @@ public class KsServer {
     }
 
 
-    public static KsKaClient getKsKaClient() {
+    public static KskaClient getKsKaClient() {
         if (ksKaClient == null) throw new KRunException("zookeeper连接为空,请重新保存平台kafka");
         return ksKaClient;
     }
@@ -253,7 +260,7 @@ public class KsServer {
 
     public static void setKsKaClient(String url) {
         if (ksKaClient != null) ksKaClient.close();
-        ksKaClient = KsKaClient.apply(url);
+        ksKaClient = new KskaClient(url);
     }
 
     public static void overWrite(String zkUrl, String jmxUrl) throws IOException {

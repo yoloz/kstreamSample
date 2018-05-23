@@ -8,7 +8,7 @@ import com.unimas.kstream.StopProcess;
 import com.unimas.kstream.bean.KSource;
 import com.unimas.kstream.dic.DicSets;
 import com.unimas.kstream.error.KConfigException;
-import kafka.KsKaClient;
+import com.unimas.kstream.kafka.KskaClient;
 import com.unimas.kstream.process.operation.Operation;
 import com.unimas.kstream.process.output.OutPut;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
@@ -208,7 +208,7 @@ public class AppImpl extends Thread implements KUtils {
         if (stop != null) stop.countDown();
         String zkUrls = "ks.zookeeper.url";
         if (!isNullOrEmpty(testAppId) && !isNullOrEmpty(mainProperties.getProperty(zkUrls))) {
-            KsKaClient client = KsKaClient.apply(mainProperties.getProperty(zkUrls));
+            KskaClient client = new KskaClient(mainProperties.getProperty(zkUrls));
             try {
                 client.deleteTopic(testAppId,true);
             } catch (Throwable e) {

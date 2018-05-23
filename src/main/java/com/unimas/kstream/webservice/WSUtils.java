@@ -10,13 +10,20 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.nio.file.DirectoryStream;
+import java.nio.file.FileSystem;
 import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
+import java.nio.file.spi.FileSystemProvider;
 import java.sql.SQLException;
+import java.util.HashMap;
 import java.util.Map;
+
+import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
 
 public class WSUtils {
 
@@ -135,5 +142,63 @@ public class WSUtils {
             }
         }
         return null;
+    }
+
+    public static void zipAction(String action, Path... paths) throws IOException {
+        FileSystemProvider provider = null;
+        for (FileSystemProvider p : FileSystemProvider.installedProviders()) {
+            if ("jar".equals(p.getScheme())) {
+                provider = p;
+                break;
+            }
+        }
+        if (provider == null) throw new IOException("ZIP filesystem provider is not installed");
+        Map<String, String> env = new HashMap<>(1);
+        if ("compress".equals(action)) env.put("create", "true");
+        try (FileSystem fs = provider.newFileSystem(paths[0], env)) {
+            if ("extract".equals(action)) {
+                extract(fs, "/");
+            } else {
+                for (int i = 1; i < paths.length; i++) compress(fs, paths[i]);
+            }
+        }
+    }
+
+    private static void extract(FileSystem fs, String path) throws IOException {
+        Path src = fs.getPath(path);
+        if (Files.isDirectory(src)) {
+            try (DirectoryStream<Path> ds = Files.newDirectoryStream(src)) {
+                for (Path child : ds) extract(fs, child.toString());
+            }
+        } else {
+            if (path.startsWith("/")) path = path.substring(1);
+            Path dst = KsServer.app_dir.resolve(path);
+            Path parent = dst.getParent();
+            if (parent != null && Files.notExists(parent)) Files.createDirectories(parent);
+            Files.copy(src, dst, REPLACE_EXISTING);
+        }
+    }
+
+    private static void compress(FileSystem fs, Path src) throws IOException {
+        if (Files.isDirectory(src)) {
+            try (DirectoryStream<Path> ds = Files.newDirectoryStream(src)) {
+                for (Path child : ds) compress(fs, child);
+            }
+        } else {
+            String relative = src.toString().replaceFirst(KsServer.app_dir.toString(), "");
+            Path dst = fs.getPath(relative);
+            Path parent = dst.getParent();
+            if (parent != null && Files.notExists(parent)) Files.createDirectories(parent);
+            Files.copy(src, dst, REPLACE_EXISTING);
+        }
+    }
+
+
+    public static void main(String[] args) throws IOException {
+//        zipAction("compress",
+//                Paths.get("/home/ylzhang/projects/kstream/app/app.zip"),
+//                Paths.get("/home/ylzhang/projects/kstream/app/bin"),
+//                Paths.get("/home/ylzhang/projects/kstream/app/config"));
+        zipAction("extract", Paths.get("/home/ylzhang/projects/kstream/app/app.zip"));
     }
 }
