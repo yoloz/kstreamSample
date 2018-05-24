@@ -1,0 +1,4 @@
+入口集成到其他容器项目中,操作如下：
+将com.unimas.kska.integration.KsServer.java
+替换掉
+com.unimas.kska.KsServer.java
