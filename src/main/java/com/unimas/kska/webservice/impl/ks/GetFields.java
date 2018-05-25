@@ -26,7 +26,8 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.charset.Charset;
 import java.sql.SQLException;
-import java.util.Arrays;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -93,14 +94,14 @@ public class GetFields extends HttpServlet {
      * @see ServletResponse#setContentType
      */
     @Override
-    protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws IOException {
+    protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws IOException {
         String body = WSUtils.readInputStream(req.getInputStream());
         logger.debug("getFields==>" + body);
         Map<String, String> bodyObj = KJson.readStringValue(body);
         String app_id = bodyObj.get("app_id");
         String topic = bodyObj.get("topic");
         String error = null;
-        String result = "[]";
+        List<String> result = new ArrayList<>();
         MysqlOperator mysqlOperator = KsServer.getMysqlOperator();
         try {
             List<Map<String, String>> _l = null;
@@ -141,7 +142,7 @@ public class GetFields extends HttpServlet {
                                 if (resEntity != null) {
                                     String r = EntityUtils.toString(resEntity);
                                     if (r.equals("1")) error = "值解析失败!";
-                                    else result = Arrays.toString(r.split(","));
+                                    else Collections.addAll(result, r.split(","));
                                 }
                             } else error = "请求值解析失败,返回" + statusLine;
                         }
@@ -154,7 +155,8 @@ public class GetFields extends HttpServlet {
         }
         OutputStream outputStream = resp.getOutputStream();
         if (error == null) {
-            String r = "{\"success\":true,\"results\":" + result + "}";
+            String r = "{\"success\":true,\"results\":" + KJson.writeValue(result, new TypeToken<List<String>>() {
+            }.getType()) + "}";
             outputStream.write(r.getBytes("utf-8"));
         } else {
             String r = "{\"success\":false,\"error\":\"" + error + "\"}";

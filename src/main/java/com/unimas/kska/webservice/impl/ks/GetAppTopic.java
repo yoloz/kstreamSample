@@ -1,5 +1,6 @@
 package com.unimas.kska.webservice.impl.ks;
 
+import com.google.gson.reflect.TypeToken;
 import com.unimas.kska.KsServer;
 import com.unimas.kska.bean.KJson;
 import com.unimas.kska.webservice.MysqlOperator;
@@ -15,6 +16,7 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -79,21 +81,19 @@ public class GetAppTopic extends HttpServlet {
         Map<String, String> bodyObj = KJson.readStringValue(body);
         String app_id = bodyObj.get("app_id");
         String error = null;
-        StringBuilder result = new StringBuilder("[");
+        List<String> result = new ArrayList<>();
         MysqlOperator mysqlOperator = KsServer.getMysqlOperator();
         try {
             List<Map<String, String>> inputs = mysqlOperator.query(
                     "select input_json from ksinput where app_id=?",
                     app_id);
             if (!inputs.isEmpty()) {
-                for (int i = 0; i < inputs.size(); i++) {
-                    Map<String, String> _v = KJson.readStringValue(inputs.get(i).get("input_json"));
+                for (Map<String, String> input : inputs) {
+                    Map<String, String> _v = KJson.readStringValue(input.get("input_json"));
                     if (_v.containsKey("ks_topics")) {
-                        result.append(_v.get("ks_topics"));
-                        if (i != inputs.size() - 1) result.append(",");
+                        result.add(_v.get("ks_topics"));
                     } else error = "任务[" + app_id + "]数据源ks_topics未配置!";
                 }
-                result.append("]");
             } else error = "任务[" + app_id + "]数据源未配置!";
         } catch (SQLException e) {
             error = "查询表[ksinput]出错!";
@@ -101,7 +101,8 @@ public class GetAppTopic extends HttpServlet {
         }
         OutputStream outputStream = resp.getOutputStream();
         if (error == null) {
-            String r = "{\"success\":true,\"results\":" + result + "}";
+            String r = "{\"success\":true,\"results\":" + KJson.writeValue(result, new TypeToken<List<String>>() {
+            }.getType()) + "}";
             outputStream.write(r.getBytes("utf-8"));
         } else {
             String r = "{\"success\":false,\"error\":\"" + error + "\"}";
