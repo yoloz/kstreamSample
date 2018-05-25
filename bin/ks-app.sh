@@ -29,5 +29,5 @@ else
 fi
 KS_LOG4J_OPTS="-Dks.logs.dir=$log_dir $KS_LOG4J_OPTS"
 KS_APP_DIR="-Dks.app.dir=$app_dir"
-#exec ${JAVA} ${KS_APP_DIR} ${KS_LOG4J_OPTS} -cp ${CLASSPATH} com.unimas.kstream.AppServer "$@"
-nohup ${JAVA} ${KS_APP_DIR} ${KS_LOG4J_OPTS} -cp ${CLASSPATH}  com.unimas.kstream.AppServer "$@" > "$log_dir/ks.out" 2>&1 < /dev/null &
+#exec ${JAVA} ${KS_APP_DIR} ${KS_LOG4J_OPTS} -cp ${CLASSPATH} com.unimas.kska.AppServer "$@"
+nohup ${JAVA} ${KS_APP_DIR} ${KS_LOG4J_OPTS} -cp ${CLASSPATH}  com.unimas.kska.AppServer "$@" > "$log_dir/ks.out" 2>&1 < /dev/null &

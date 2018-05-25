@@ -1,5 +1,7 @@
 package com.unimas.kska;
 
+import com.google.common.collect.ImmutableMap;
+import com.google.gson.reflect.TypeToken;
 import com.unimas.kska.bean.KJson;
 import org.apache.http.StatusLine;
 import org.apache.http.client.methods.HttpGet;
@@ -108,6 +110,7 @@ public class KsServerTest {
             outPutResult(response);
         }
     }
+
     @Test
     public void getLocalIp() throws IOException {
         HttpGet httpGet = new HttpGet("http://10.68.13.120:12583/cii/ka/getLocalIp");
@@ -115,6 +118,22 @@ public class KsServerTest {
             outPutResult(response);
         }
     }
+
+    @Test
+    public void parseValue() throws IOException {
+        String value = "{\"filetype\":\"\",\"srcip\":\"10.15.6.73\",\"suspiciousaddr\":\"\",\"dstport\":\"53\",\"subject\":\"DNS_内网向外请求\",\"file_direct\":\"\",\"securityid\":\"12\",\"aptid\":\"\",\"type\":\"Alert Log\",\"dt\":\"V0200R0400B20160921\",\"protocol\":\"DNS\",\"id\":\"-1995126411\",\"dstip\":\"216.239.36.10\",\"chekresultstatic\":\"\",\"combine_key\":\"DNS_内网向外请求_10.15.6.73_62145_216.239.36.10_53\",\"logstash_receive_time\":\"2018-01-12T08:05:48.473Z\",\"level\":20,\"count\":1,\"log_send_ip\":\"60.208.94.158\",\"security_name\":\"可疑行为\",\"level_name\":\"低级事件\",\"sender\":\"\",\"name\":\"\",\"devid\":\"\",\"server_name\":\"\",\"log_send_time\":\"Jan 12 16:06:49\",\"dstmac\":\"C4-47-3F-49-AE-2B\",\"request_resource\":\"\",\"user_name\":\"\",\"suspiciousdomain\":\"\",\"doc_type\":\"ids\",\"result\":\"\",\"ndayflag\":\"\",\"srcmac\":\"00-50-56-8F-2D-70\",\"severity\":0,\"reserve1\":\"\",\"endtime\":\"1515744409000\",\"reserve3\":\"\",\"evilcodetype\":\"\",\"original_message\":\"<12>Jan 12 16:06:49 (none) {\\\"dt\\\":\\\"V0200R0400B20160921\\\",\\\"level\\\":20,\\\"id\\\":\\\"-1995126411\\\",\\\"type\\\":\\\"Alert Log\\\",\\\"time\\\":1515744409,\\\"source\\\":{\\\"ip\\\":\\\"10.15.6.73\\\",\\\"port\\\":62145,\\\"mac\\\":\\\"00-50-56-8F-2D-70\\\"},\\\"destination\\\":{\\\"ip\\\":\\\"216.239.36.10\\\",\\\"port\\\":53,\\\"mac\\\":\\\"C4-47-3F-49-AE-2B\\\"},\\\"count\\\":1,\\\"protocol\\\":\\\"DNS\\\",\\\"subject\\\":\\\"DNS_内网向外请求\\\",\\\"message\\\":\\\"nic=4;源IP地址=10.15.6.73;DNS查询类型=1;请求域名=clients5.google.com;数据=c4 01 00 00 00 01 00 00 00 00 00 00 08 63 6c 69 65 6e 74 73 35 06 67 6f 6f 67 6c 65 03 63 6f 6d 00 00 01 00 01;\\\",\\\"securityid\\\":\\\"12\\\",\\\"attackid\\\":\\\"9000\\\"}\",\"reserve2\":\"\",\"message\":\"nic=4;源IP地址=10.15.6.73;DNS查询类型=1;请求域名=clients5.google.com;数据=c4 01 00 00 00 01 00 00 00 00 00 00 08 63 6c 69 65 6e 74 73 35 06 67 6f 6f 67 6c 65 03 63 6f 6d 00 00 01 00 01;\",\"email_title\":\"\",\"attack_name\":\"其他类攻击事件-其他\",\"recipient\":\"\",\"srcport\":\"62145\",\"request_domain\":\"\",\"suspiciousurl\":\"\",\"mark\":\"mark\",\"md5\":\"\",\"attackid\":\"9000\"}";
+        Map<String, String> map = ImmutableMap.of("src", value, "logtype", "json",
+                "separator", "", "head", "false","keyword","");
+        String param = KJson.writeValue(map, new TypeToken<Map<String, String>>() {
+        }.getType());
+        HttpPost httpPost = new HttpPost("http://10.68.120.12:7914/parse");
+        httpPost.setEntity(new StringEntity(param, Charset.forName("utf-8")));
+        httpPost.addHeader("Content-Type","application/json");
+        try (CloseableHttpResponse response = httpClient.execute(httpPost)) {
+            outPutResult(response);
+        }
+    }
+
 
     private void outPutResult(CloseableHttpResponse response) throws IOException {
         StatusLine statusLine = response.getStatusLine();

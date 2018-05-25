@@ -25,8 +25,8 @@ KS_LOG4J_OPTS="-Dks.logs.dir=$log_dir $KS_LOG4J_OPTS"
 KS_ROOT_DIR="-Dks.root.dir=$KS_DIR"
 if [ "x$1" = "xdaemon" ]; then
   shift
-  nohup ${JAVA} ${KS_ROOT_DIR} ${KS_LOG4J_OPTS} -cp ${CLASSPATH} com.unimas.kstream.KsServer "start" > "$log_dir/ks.out" 2>&1 < /dev/null &
+  nohup ${JAVA} ${KS_ROOT_DIR} ${KS_LOG4J_OPTS} -cp ${CLASSPATH} com.unimas.kska.KsServer "start" > "$log_dir/ks.out" 2>&1 < /dev/null &
 else
-  exec ${JAVA} ${KS_ROOT_DIR} ${KS_LOG4J_OPTS} -cp ${CLASSPATH} com.unimas.kstream.KsServer "$@"
+  exec ${JAVA} ${KS_ROOT_DIR} ${KS_LOG4J_OPTS} -cp ${CLASSPATH} com.unimas.kska.KsServer "$@"
 fi
 

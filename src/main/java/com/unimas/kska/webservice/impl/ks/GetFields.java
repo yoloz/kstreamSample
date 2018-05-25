@@ -100,7 +100,7 @@ public class GetFields extends HttpServlet {
         String app_id = bodyObj.get("app_id");
         String topic = bodyObj.get("topic");
         String error = null;
-        String result = "";
+        String result = "[]";
         MysqlOperator mysqlOperator = KsServer.getMysqlOperator();
         try {
             List<Map<String, String>> _l = null;
@@ -118,16 +118,16 @@ public class GetFields extends HttpServlet {
                                 m.get("ds_id"));
                 }
             }
-            if (_l == null || _l.isEmpty()) error = "获取kafka地址出错!";
+            if (_l == null || _l.isEmpty()) error = "kafka地址为空!";
             else {
                 String ds_json = _l.get(0).get("ds_json");
                 Map<String, String> ds_map = KJson.readStringValue(ds_json);
                 try (KaConsumer kaConsumer = new KaConsumer(ds_map.get("kafka_url"), topic)) {
                     String value = kaConsumer.getOneValue();
-                    if (value.isEmpty()) error = "kafka中读取数据为空!";
-                    else {
+//                    if (value.isEmpty()) error = "kafka中读取数据为空!";
+                    if (!value.isEmpty()) {
                         Map<String, String> map = ImmutableMap.of("src", value, "logtype", "json",
-                                "separator", "", "head", "false");
+                                "separator", "", "head", "false", "keyword", "");
                         String param = KJson.writeValue(map, new TypeToken<Map<String, String>>() {
                         }.getType());
                         logger.debug("parse param:" + param);
@@ -148,7 +148,6 @@ public class GetFields extends HttpServlet {
                     }
                 }
             }
-
         } catch (SQLException e) {
             error = "获取kafka地址出错!";
             logger.error(error, e);

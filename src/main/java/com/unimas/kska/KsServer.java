@@ -11,6 +11,8 @@ import com.unimas.kska.webservice.impl.ds.DeleteDS;
 import com.unimas.kska.webservice.impl.ds.GetDS;
 import com.unimas.kska.webservice.impl.ka.GetAddr;
 import com.unimas.kska.webservice.impl.ka.GetLocalIp;
+import com.unimas.kska.webservice.impl.ks.GetAppTopic;
+import com.unimas.kska.webservice.impl.ks.GetFields;
 import com.unimas.kska.webservice.impl.ks.UDFile;
 import com.unimas.kska.webservice.RegularlyUpdate;
 import com.unimas.kska.webservice.MysqlOperator;
@@ -119,7 +121,9 @@ public class KsServer {
         servletHandler.addServletWithMapping(GetAppConf.class, "/cii/ks/getAppConf");
         servletHandler.addServletWithMapping(GetAllApp.class, "/cii/ks/getAllApp");
         servletHandler.addServletWithMapping(GetTopics.class, "/cii/ks/getTopics");
-        servletHandler.addServletWithMapping(UDFile.class, "/cii/ks/udFile");
+        servletHandler.addServletWithMapping(UDFile.class, "/cii/ks/uDFile");
+        servletHandler.addServletWithMapping(GetFields.class, "/cii/ks/getFields");
+        servletHandler.addServletWithMapping(GetAppTopic.class, "/cii/ks/getAppTopic");
 
         servletHandler.addServletWithMapping(SetAddr.class, "/cii/ka/setAddr");
         servletHandler.addServletWithMapping(GetAddr.class, "/cii/ka/getAddr");
