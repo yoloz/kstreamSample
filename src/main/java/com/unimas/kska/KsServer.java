@@ -9,6 +9,8 @@ import com.unimas.kska.kafka.KskaClient;
 import com.unimas.kska.webservice.WSUtils;
 import com.unimas.kska.webservice.impl.ds.DeleteDS;
 import com.unimas.kska.webservice.impl.ds.GetDS;
+import com.unimas.kska.webservice.impl.ka.CreateTopic;
+import com.unimas.kska.webservice.impl.ka.DeleteTopic;
 import com.unimas.kska.webservice.impl.ka.GetAddr;
 import com.unimas.kska.webservice.impl.ka.GetLocalIp;
 import com.unimas.kska.webservice.impl.ks.GetAppTopic;
@@ -131,6 +133,8 @@ public class KsServer {
         servletHandler.addServletWithMapping(GetTopic.class, "/cii/ka/getTopic");
         servletHandler.addServletWithMapping(LogEndOffset.class, "/cii/ka/logEndOffset");
         servletHandler.addServletWithMapping(GetLocalIp.class, "/cii/ka/getLocalIp");
+        servletHandler.addServletWithMapping(CreateTopic.class, "/cii/ka/createTopic");
+        servletHandler.addServletWithMapping(DeleteTopic.class, "/cii/ka/deleteTopic");
 
         servletHandler.addServletWithMapping(GetAllDS.class, "/cii/ds/getAllDS");
         servletHandler.addServletWithMapping(GetMpDS.class, "/cii/ds/getMpDS");

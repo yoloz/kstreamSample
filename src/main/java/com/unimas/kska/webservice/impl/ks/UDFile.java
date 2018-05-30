@@ -1,6 +1,9 @@
 package com.unimas.kska.webservice.impl.ks;
 
+import com.google.common.collect.ImmutableList;
 import com.unimas.kska.KsServer;
+import com.unimas.kska.webservice.MysqlOperator;
+import com.unimas.kska.webservice.WSUtils;
 import org.eclipse.jetty.server.Request;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -22,10 +25,21 @@ import java.net.URLEncoder;
 import java.nio.channels.Channels;
 import java.nio.channels.FileChannel;
 import java.nio.channels.ReadableByteChannel;
+import java.nio.file.Files;
+import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
+import java.sql.Connection;
+import java.sql.SQLException;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.time.OffsetTime;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeFormatterBuilder;
 import java.util.Collection;
+import java.util.List;
+import java.util.Map;
 
 /**
  * upload or download file
@@ -99,6 +113,38 @@ public class UDFile extends HttpServlet {
      */
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws IOException {
+//        String type = req.getParameter("type");
+//        String id = req.getParameter("id");
+//        String error = null;
+//        MysqlOperator mysqlOperator = KsServer.getMysqlOperator();
+//        try {
+//            String service_id;
+//            List<String> app_ids;
+//            List<Map<String, String>> list;
+//            if ("app".equals(type)) list = mysqlOperator.query(
+//                    "select service_id from ksapp where app_id=? and app_status>0", id);
+//            else list = mysqlOperator.query(
+//                    "select app_id from ksapp where service_id=? and app_status>0", id);
+//            if (list.isEmpty()) error = type.equals("app") ? "任务" : "服务" + "[" + id + "]无可下载文件";
+//            if ("app".equals(type)) {
+//                app_ids = ImmutableList.of(id);
+//                service_id = list.get(0).get("service_id");
+//            } else {
+//                service_id = id;
+//                ImmutableList.Builder<String> builder = new ImmutableList.Builder<>();
+//                for (Map<String, String> map : list) {
+//                    builder.add(map.get("app_id"));
+//                }
+//                app_ids = builder.build();
+//            }
+//            Path dir = KsServer.download_dir.resolve(service_id);
+//            if (Files.exists(dir, LinkOption.NOFOLLOW_LINKS)) Files.walkFileTree(dir, new WSUtils.EmptyDir());
+//            Files.createDirectory(dir);
+//            mysqlOperator.fixUpdate("select * from ksservice where service_id=? into outfile '/home/ylzhang/test.sql'",
+//                    service_id);
+//        } catch (SQLException e) {
+//
+//        }
         String value = req.getParameter("f");
         logger.debug(value);
         String error;

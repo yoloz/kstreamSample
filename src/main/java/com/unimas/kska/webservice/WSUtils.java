@@ -152,7 +152,7 @@ public class WSUtils {
                 break;
             }
         }
-        if (provider == null) throw new IOException("ZIP filesystem provider is not installed");
+        if (provider == null) throw new IOException("zip filesystem provider is not installed");
         Map<String, String> env = new HashMap<>(1);
         if ("compress".equals(action)) env.put("create", "true");
         try (FileSystem fs = provider.newFileSystem(paths[0], env)) {
