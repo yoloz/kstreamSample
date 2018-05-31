@@ -2,6 +2,7 @@ package com.unimas.kska;
 
 import com.google.common.collect.ImmutableList;
 import com.unimas.kska.bean.AppInfo;
+import com.unimas.kska.bean.KJson;
 import com.unimas.kska.bean.ServiceInfo;
 import com.unimas.kska.error.KRunException;
 import com.unimas.kska.kafka.KaJMX;
@@ -96,12 +97,6 @@ public class KsServer {
             this.port = Integer.parseInt(p.getProperty("port"));
             wfUrl = p.getProperty("wf.url", "http://localhost:7914");
             mysqlOperator = new MysqlOperator(p);
-            String jmxUrl = p.getProperty("jmx.url");
-            if (jmxUrl != null && !jmxUrl.isEmpty()) kaJMX = new KaJMX(jmxUrl);
-            else logger.warn("===============kafka jmx url undefined===============");
-            String zkUrl = p.getProperty("zk.url");
-            if (zkUrl != null && !zkUrl.isEmpty()) ksKaClient = new KskaClient(zkUrl);
-            else logger.warn("===============zookeeper url undefined===============");
             if (Files.notExists(app_dir, LinkOption.NOFOLLOW_LINKS)) Files.createDirectory(app_dir);
         } else {
             throw new Exception(cf + " is not exist!");
@@ -151,7 +146,29 @@ public class KsServer {
         logger.info("jetty server start and bind to port " + port);
         logger.info("init ks applications");
         this.initApp();
+        logger.info("init zk and jmx addr");
+        this.initKaAddr();
         logger.info("jetty server started...");
+    }
+
+    private void initKaAddr() {
+        try {
+            List<Map<String, String>> list = mysqlOperator.query(
+                    "select ds_json from ciisource where ds_id=?", "11111111111111");
+            if (!list.isEmpty()) {
+                Map<String, String> _m = list.get(0);
+                if (_m != null && _m.containsKey("ds_json")) {
+                    Map<String, String> ds_json = KJson.readStringValue(_m.get("ds_json"));
+                    if (ds_json.containsKey("zk_url") && !ds_json.get("zk_url").isEmpty())
+                        ksKaClient = new KskaClient(ds_json.get("zk_url"));
+                    if (ds_json.containsKey("jmx_url") && !ds_json.get("jmx_url").isEmpty())
+                        kaJMX = new KaJMX(ds_json.get("jmx_url"));
+                } else logger.error("查询出的平台KAFKA数据错误!");
+
+            }
+        } catch (SQLException | IOException e) {
+            logger.error("初始化平台KAFKA地址出错", e);
+        }
     }
 
     /**

@@ -41,16 +41,16 @@ public class MysqlOperator implements KUtils {
     private BasicDataSource dataSource;
 
     public MysqlOperator(String driver, String host, String port, String user, String pwd,
-                         String dbName, String connMin, String connMax) {
+                         String dbName, int connMin, int connMax) {
         String url = "jdbc:mysql://" + host + ":" + port +
                 "/" + dbName + "?useUnicode=true&characterEncoding=utf-8";
         this.dataSource = new BasicDataSource();
         this.dataSource.setDriverClassName(driver);
         this.dataSource.setUrl(url);
-        this.dataSource.setInitialSize(Integer.parseInt(connMin));
-        this.dataSource.setMaxTotal(Integer.parseInt(connMax));
-        this.dataSource.setMaxIdle(Integer.parseInt(connMax));
-        this.dataSource.setMinIdle(Integer.parseInt(connMin));
+        this.dataSource.setInitialSize(connMin);
+        this.dataSource.setMaxTotal(connMax);
+        this.dataSource.setMaxIdle(connMax);
+        this.dataSource.setMinIdle(connMin);
         this.dataSource.setUsername(user);
         this.dataSource.setPassword(pwd);
         this.dataSource.setDefaultAutoCommit(false);

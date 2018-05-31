@@ -5,7 +5,6 @@ import com.google.gson.reflect.TypeToken;
 import com.unimas.kska.KsServer;
 import com.unimas.kska.bean.AppInfo;
 import com.unimas.kska.bean.KJson;
-import com.unimas.kska.bean.ObjectId;
 import com.unimas.kska.webservice.MysqlOperator;
 import com.unimas.kska.webservice.WSUtils;
 import org.slf4j.Logger;
@@ -91,7 +90,7 @@ public class SetAddr extends HttpServlet {
             String kds_name = "平台KAFKA";
             List<Map<String, String>> list = mysqlOperator.query("select ds_id from ciisource where ds_name=?",
                     kds_name);
-            if (list.isEmpty()) ds_id = ObjectId.get().toString();
+            if (list.isEmpty()) ds_id = "11111111111111";
             else if (list.size() == 1) ds_id = list.get(0).get("ds_id");
             else error = "数据源中存在多个名称[平台kafka]记录";
             if (error == null) {

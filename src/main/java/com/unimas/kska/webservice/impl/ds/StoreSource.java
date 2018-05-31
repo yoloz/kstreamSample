@@ -92,7 +92,8 @@ public class StoreSource extends HttpServlet {
                         "insert into ciisource(ds_id,ds_name,ds_type,ds_json)values(?,?,?,?)",
                         ds_id, ds_name, ds_type, KJson.writeValueAsString(ds_json));
             } else {
-                mysqlOperator.update(null, null,
+                if ("11111111111111".equals(ds_id)) error = "平台KAFKA这里不可修改!";
+                else mysqlOperator.update(null, null,
                         "update ciisource set ds_name=?,ds_type=?,ds_json=? where ds_id=?",
                         ds_name, ds_type, KJson.writeValueAsString(ds_json), ds_id);
             }

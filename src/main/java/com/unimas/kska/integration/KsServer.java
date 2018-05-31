@@ -1,6 +1,7 @@
 package com.unimas.kska.integration;
 
 import com.unimas.kska.bean.AppInfo;
+import com.unimas.kska.bean.KJson;
 import com.unimas.kska.bean.ServiceInfo;
 import com.unimas.kska.error.KRunException;
 import com.unimas.kska.kafka.KaJMX;
@@ -14,10 +15,7 @@ import org.slf4j.LoggerFactory;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
@@ -30,7 +28,6 @@ import java.nio.file.Paths;
 import java.sql.SQLException;
 import java.util.List;
 import java.util.Map;
-import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -57,16 +54,12 @@ public class KsServer {
 
     public KsServer() throws Exception {
         mysqlOperator = new MysqlOperator("com.mysql.jdbc.Driver", "10.68.120.184", "3306", "scb"
-                , "unimas", "logstash", "1", "3");
-//            String jmxUrl = p.getProperty("jmx.url");
-//            if (jmxUrl != null && !jmxUrl.isEmpty()) kaJMX = new KaJMX(jmxUrl);
-//            else logger.warn("===============kafka jmx url undefined===============");
-//            String zkUrl = p.getProperty("zk.url");
-//            if (zkUrl != null && !zkUrl.isEmpty()) ksKaClient = new KskaClient(zkUrl);
-//            else logger.warn("===============zookeeper url undefined===============");
+                , "unimas", "logstash", 1, 3);
         if (Files.notExists(app_dir, LinkOption.NOFOLLOW_LINKS)) Files.createDirectory(app_dir);
         logger.info("init ks applications");
         this.initApp();
+        logger.info("init zk and jmx addr");
+        this.initKaAddr();
         logger.info("start regularlyUpdate");
         bst.start();
     }
@@ -117,6 +110,26 @@ public class KsServer {
             outputStream.write(msg.getBytes("utf-8"));
         } catch (IOException e) {
             logger.error(e.getMessage(), e);
+        }
+    }
+
+    private void initKaAddr() {
+        try {
+            List<Map<String, String>> list = mysqlOperator.query(
+                    "select ds_json from ciisource where ds_id=?", "11111111111111");
+            if (!list.isEmpty()) {
+                Map<String, String> _m = list.get(0);
+                if (_m != null && _m.containsKey("ds_json")) {
+                    Map<String, String> ds_json = KJson.readStringValue(_m.get("ds_json"));
+                    if (ds_json.containsKey("zk_url") && !ds_json.get("zk_url").isEmpty())
+                        ksKaClient = new KskaClient(ds_json.get("zk_url"));
+                    if (ds_json.containsKey("jmx_url") && !ds_json.get("jmx_url").isEmpty())
+                        kaJMX = new KaJMX(ds_json.get("jmx_url"));
+                } else logger.error("查询出的平台KAFKA数据错误!");
+
+            }
+        } catch (SQLException | IOException e) {
+            logger.error("初始化平台KAFKA地址出错", e);
         }
     }
 
@@ -189,21 +202,5 @@ public class KsServer {
     public static void setKsKaClient(String url) {
         if (ksKaClient != null) ksKaClient.close();
         ksKaClient = new KskaClient(url);
-    }
-
-    public static void overWrite(String zkUrl, String jmxUrl) throws IOException {
-        Path cf = Paths.get(root_dir, "conf", "server.conf");
-        if (cf.toFile().exists()) {
-            Properties p = new Properties();
-            try (InputStreamReader reader = new InputStreamReader(
-                    new FileInputStream(cf.toFile()), Charset.forName("UTF-8"))) {
-                p.load(reader);
-            }
-            p.put("zk.url", zkUrl);
-            p.put("jmx.url", jmxUrl);
-            try (FileOutputStream output = new FileOutputStream(cf.toFile())) {
-                p.store(output, null);
-            }
-        }
     }
 }

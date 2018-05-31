@@ -93,10 +93,21 @@ public class CreateTopic extends HttpServlet {
                 error = e.getMessage();
                 logger.error(error, e);
             }
+            int _parti = 1, _repli = 1;
+            long mill = 0;
+            try {
+                _parti = Integer.parseInt(parti);
+                _repli = Integer.parseInt(repli);
+                int _day = Integer.parseInt(retention_day);
+                mill = _day * 24 * 3600 * 1000;
+            } catch (NumberFormatException e) {
+                error = "参数字符串转换成整数出错!";
+                logger.error(error, e);
+            }
             if (error == null && client != null) try {
                 Properties properties = new Properties();
-                properties.put("retention.ms", Integer.parseInt(retention_day) * 24 * 3600 * 1000);
-                client.createTopic(topic, Integer.parseInt(parti), Integer.parseInt(repli), properties);
+                properties.put("retention.ms", mill + "");
+                client.createTopic(topic, _parti, _repli, properties);
             } catch (Throwable e) {
                 error = "请检查zookeeper地址端口是否正确";
                 logger.error(error, e);

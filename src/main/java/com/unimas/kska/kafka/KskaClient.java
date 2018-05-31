@@ -99,9 +99,9 @@ public class KskaClient {
     public List<Map<String, String>> getTopicDetail(String topic) {
         List<Map<String, String>> list = new ArrayList<>();
         Map<Integer, String> mb = getBrokers();
-        Option<scala.collection.Map<Object, Seq<Object>>> _map = zkClient.getPartitionAssignmentForTopics(
-                JavaConverters.asScalaIteratorConverter(ImmutableList.of(topic).iterator()).asScala().toSeq())
-                .get(topic);
+        Option<scala.collection.Map<Object, Seq<Object>>> _map = (
+                (scala.collection.mutable.HashMap<String, scala.collection.Map<Object, Seq<Object>>>) zkClient.getPartitionAssignmentForTopics(
+                JavaConverters.asScalaIteratorConverter(ImmutableList.of(topic).iterator()).asScala().toSeq())).get(topic);
         Map<Object, Seq<Object>> map = _map.isDefined() ? JavaConversions.mapAsJavaMap(_map.get()) : Collections.emptyMap();
         if (map != null && !map.isEmpty()) {
             map.forEach((k, v) -> {
