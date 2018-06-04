@@ -11,7 +11,7 @@ public class KaJMXTest {
 
     @Before
     public void setUp() throws Exception {
-        kaJMX = new KaJMX("10.68.23.11:9999");
+        kaJMX = new KaJMX("10.68.120.111:9999");
     }
 
     @After

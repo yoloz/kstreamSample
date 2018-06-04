@@ -3,6 +3,7 @@ package com.unimas.kska.webservice.impl.ka;
 import com.google.gson.reflect.TypeToken;
 import com.unimas.kska.KsServer;
 import com.unimas.kska.bean.KJson;
+import com.unimas.kska.kafka.KaJMX;
 import com.unimas.kska.kafka.KskaClient;
 import com.unimas.kska.webservice.WSUtils;
 import org.slf4j.Logger;
@@ -14,6 +15,8 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -83,17 +86,30 @@ public class GetAllTopic extends HttpServlet {
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws IOException {
         String body = WSUtils.readInputStream(req.getInputStream());
         logger.debug("getAllTopic==>" + body);
-        List<Map<String, String>> topics = null;
+        List<Map<String, String>> topics = new ArrayList<>();
         String error = null;
-        KskaClient client = null;
+        KskaClient kaClient = null;
+        KaJMX jmxClient = null;
         try {
-            client = KsServer.getKsKaClient();
+            kaClient = KsServer.getKsKaClient();
         } catch (Throwable e) {
             error = e.getMessage();
             logger.error(error, e);
         }
-        if (error == null && client != null) try {
-            topics = client.getAllTopics();
+        try {
+            jmxClient = KsServer.getKaJMX();
+        } catch (Throwable e) {
+            error = e.getMessage();
+            logger.error(error, e);
+        }
+        if (error == null && kaClient != null && jmxClient != null) try {
+            List<Map<String, String>> _topics = kaClient.getAllTopics();
+            for (Map<String, String> m : _topics) {
+                Map<String, String> _map = new HashMap<>(m);
+                Map<String, Object> offsets = jmxClient.getLogEndOffset(m.get("topic"));
+                _map.put("total", String.valueOf(offsets.get("total")));
+                topics.add(_map);
+            }
         } catch (Throwable e) {
             error = "请检查zookeeper地址端口是否正确";
             logger.error(error, e);
