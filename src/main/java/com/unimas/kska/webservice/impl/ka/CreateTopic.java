@@ -4,6 +4,7 @@ import com.unimas.kska.KsServer;
 import com.unimas.kska.bean.KJson;
 import com.unimas.kska.kafka.KskaClient;
 import com.unimas.kska.webservice.WSUtils;
+import org.apache.kafka.common.errors.TopicExistsException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -109,7 +110,11 @@ public class CreateTopic extends HttpServlet {
                 properties.put("retention.ms", mill + "");
                 client.createTopic(topic, _parti, _repli, properties);
             } catch (Throwable e) {
-                error = "请检查zookeeper地址端口是否正确";
+                if (e instanceof TopicExistsException) {
+                    error = e.getMessage();
+                } else {
+                    error = "请检查zookeeper地址端口是否正确";
+                }
                 logger.error(error, e);
             }
         }
