@@ -12,10 +12,12 @@ import com.unimas.kstream.web.StopApp;
 import com.unimas.kstream.web.StoreApp;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.servlet.DefaultServlet;
+import org.eclipse.jetty.servlets.CrossOriginFilter;
 import org.eclipse.jetty.webapp.WebAppContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.servlet.DispatcherType;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -23,6 +25,7 @@ import java.io.InputStreamReader;
 import java.lang.management.ManagementFactory;
 import java.nio.charset.Charset;
 import java.nio.file.*;
+import java.util.EnumSet;
 import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
@@ -78,6 +81,16 @@ public class JettyServer {
 
     }
 
+    //自定义路径及handler处理
+    /* ServletContextHandler context = new ServletContextHandler(ServletContextHandler.SESSIONS);
+     context.setContextPath("/static/");
+     context.setResourceBase(Paths.get(root_dir, "web").toString());
+     context.setWelcomeFiles(new String[]{"index.html"});
+     context.addServlet(DefaultServlet.class, "/");
+     HandlerList list = new HandlerList();
+     list.addHandler(context);
+     list.addHandler(new ProxyHandler());
+     this.server.setHandler(list);*/
     private void start() throws Exception {
         this.server = new Server(port);
         WebAppContext appContext = new WebAppContext();
@@ -90,7 +103,7 @@ public class JettyServer {
         appContext.addServlet(StoreApp.class, "/storeTask");
         appContext.addServlet(StartApp.class, "/startTask");
         appContext.addServlet(StopApp.class, "/stopTask");
-//        appContext.addFilter(CrossOriginFilter.class, "/*", EnumSet.of(DispatcherType.REQUEST));
+        appContext.addFilter(CrossOriginFilter.class, "/*", EnumSet.of(DispatcherType.REQUEST));
         this.server.setHandler(appContext);
         this.server.start();
         Files.write(web_dir.resolve("pid"), ManagementFactory.getRuntimeMXBean()
