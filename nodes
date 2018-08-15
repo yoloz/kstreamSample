@@ -1,0 +1,5 @@
+#host;kafka port;kafka data dir;zk port;zk port1;zk port2;zk data dir;install path;jmx port;master[slave]
+#127.0.0.1;9092;/var/run/kafka-logs;2181;2888;3888;/var/run/zookeeper;/opt;9999;master
+#above is deprecated    
+#host;master[slave];install path
+#说明:只支持一台master,如:192.168.0.1;master;/opt
