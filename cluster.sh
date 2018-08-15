@@ -245,6 +245,7 @@ main(){
         createKAConf
         createZKConf
         local i=0
+        local address=[]
         while [[ i -lt ${#nodeConf[*]} ]];do
             params=(${nodeConf[i]//;/ })
             target=${params[2]}'/cii_da'
@@ -257,11 +258,8 @@ main(){
             fi
             ssh $sshUser@${params[0]} "rm -rf ${kaConf[0]} && mkdir -p ${kaConf[0]}"
             remoteZK ${params[0]} $target ${params[1]} $i
-            
-            if [ "${params[1]}" == 'master' ];then
-                printf "********启动${params[0]}的采集平台[master]********\n"
-                ssh $sshUser@${params[0]} "$target/bin/cii-start.sh daemon master"
-            else
+            if [ "${params[1]}" != 'master' ];then
+                address[$i]="${params[0]}"
                 printf "********启动${params[0]}的采集平台[slave]********\n"
                 ssh $sshUser@${params[0]} "$target/bin/cii-start.sh daemon slave"
             fi
@@ -273,6 +271,18 @@ main(){
             target=${params[2]}'/cii_da'
             printf "********启动${params[0]}的kafka********\n"
             ssh $sshUser@${params[0]} "export JAVA_HOME=$target/jdk && JMX_PORT=${kaConf[2]} $target/kafka/bin/kafka-server-start.sh -daemon $target/kafka/config/server.properties"
+            if [ "${params[1]}" == 'master' ];then
+                printf "********启动${params[0]}的采集平台[master]********\n"
+                local params=''
+                for v in ${address[*]};do
+                    if [[ ${#params} -eq 0 ]];then
+                        params="$v"
+                    else
+                        params=${params}' '$v
+                    fi
+                done
+                ssh $sshUser@${params[0]} "$target/bin/cii-start.sh daemon master $params"
+            fi
         done
         # rm -rf $dir/clusterConf
         rm -rf $dir
