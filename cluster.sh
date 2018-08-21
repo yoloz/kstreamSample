@@ -95,7 +95,7 @@ createKAConf(){
         cp $dir/config/server.properties $dir/clusterConf
         mv $dir/clusterConf/server.properties $fn
         echo "broker.id=$i" >> $fn
-        echo "listeners=PLAINTEXT://${params[0]}:${kaConf[1]}" >> $fn
+        echo "listeners=PLAINTEXT://:${kaConf[1]}" >> $fn
         echo "log.dirs=${kaConf[0]}" >> $fn
         echo "zookeeper.connect=$_zk" >> $fn
         let i++
@@ -173,6 +173,8 @@ copyResource(){
     scp $dir/bin/ks-app.sh $sshUser@$2:$1/bin
     scp $dir/bin/un_install.sh $sshUser@$2:$1/bin
     scp $dir/bin/update.sh $sshUser@$2:$1/bin
+    scp $dir/bin/hosts.sh $sshUser@$2:$1/bin
+    scp $dir/bin/hosts $sshUser@$2:$1/bin
     if [ "$3" == 'master' ];then
         scp $dir/bin/cluster.sh $sshUser@$2:$1/bin
         scp $dir/bin/mysql.sh $sshUser@$2:$1/bin
@@ -185,15 +187,16 @@ copyResource(){
     scp $dir/libs/jdk-8u151-linux-x64.tar.gz $sshUser@$2:$1
     scp $dir/libs/kafka_2.11-0.11.0.1.tgz $sshUser@$2:$1
     scp $dir/libs/logstash-6.2.4.tar.gz $sshUser@$2:$1
-    ssh $sshUser@$2 "tar -zxpf $1/jdk-8u151-linux-x64.tar.gz -C $1 && mv $1/jdk1.8.0_151 $1/jdk"
-    ssh $sshUser@$2 "tar -zxpf $1/kafka_2.11-0.11.0.1.tgz -C $1 && mv $1/kafka_2.11-0.11.0.1 $1/kafka"
-    ssh $sshUser@$2 "tar -zxpf $1/logstash-6.2.4.tar.gz -C $1 && mv $1/logstash-6.2.4 $1/logstash"
+    ssh $sshUser@$2 "tar -zxpf $1/jdk-8u151-linux-x64.tar.gz -C $1 && mv $1/jdk1.8.0_151 $1/jdk && rm -f $1/jdk-8u151-linux-x64.tar.gz"
+    ssh $sshUser@$2 "tar -zxpf $1/kafka_2.11-0.11.0.1.tgz -C $1 && mv $1/kafka_2.11-0.11.0.1 $1/kafka && rm -f $1/kafka_2.11-0.11.0.1.tgz"
+    ssh $sshUser@$2 "tar -zxpf $1/logstash-6.2.4.tar.gz -C $1 && mv $1/logstash-6.2.4 $1/logstash && rm -f $1/logstash-6.2.4.tar.gz"
     scp $dir/clusterConf/$2'server.properties' $sshUser@$2:$1/kafka/config
     ssh $sshUser@$2 "mv $1/kafka/config/$2server.properties $1/kafka/config/server.properties"
     if [[ -f $dir/clusterConf/$2'zookeeper.properties' ]];then
         scp $dir/clusterConf/$2'zookeeper.properties' $sshUser@$2:$1/kafka/config
         ssh $sshUser@$2 "mv $1/kafka/config/$2zookeeper.properties $1/kafka/config/zookeeper.properties"
     fi
+    ssh $sshUser@$2 "$1/bin/hosts.sh"
 }
 remoteZK(){
     if [ ${#zkConf[@]} -eq 2 -a "$3" != 'master' ];then
@@ -210,6 +213,15 @@ remoteZK(){
         ssh $sshUser@$1 "export JAVA_HOME=$2/jdk && $2/kafka/bin/zookeeper-server-start.sh -daemon $2/kafka/config/zookeeper.properties"
         printf "********启动$1的zk********\n"
     fi
+}
+writeHosts(){
+    for v in ${nodeConf[@]}
+    do
+        params=(${v//;/ })
+        printf "${params[0]} ">>$dir/bin/hosts
+        ssh $sshUser@${params[0]} 'printf $HOSTNAME'>>$dir/bin/hosts
+        printf "\n">>$dir/bin/hosts
+    done
 }
 main(){
     if [ $# -lt 1 ];then
@@ -232,7 +244,7 @@ main(){
         printf '至少两台机器\n'
         exit 1
     fi
-    printf '请输入各机器ssh免密登陆用户名:\n'
+    printf '请输入各机器[ssh免密]登陆用户名:\n'
     read userName
     sshUser=$userName
     readonly sshUser
@@ -244,8 +256,8 @@ main(){
         mkdir $dir/clusterConf
         createKAConf
         createZKConf
+        writeHosts
         local i=0
-        local address=[]
         while [[ i -lt ${#nodeConf[*]} ]];do
             params=(${nodeConf[i]//;/ })
             target=${params[2]}'/cii_da'
@@ -258,10 +270,12 @@ main(){
             fi
             ssh $sshUser@${params[0]} "rm -rf ${kaConf[0]} && mkdir -p ${kaConf[0]}"
             remoteZK ${params[0]} $target ${params[1]} $i
-            if [ "${params[1]}" != 'master' ];then
-                address[$i]="${params[0]}"
+            if [ "${params[1]}" == 'slave' ];then
                 printf "********启动${params[0]}的采集平台[slave]********\n"
-                ssh $sshUser@${params[0]} "$target/bin/cii-start.sh daemon slave"
+                ssh $sshUser@${params[0]} "$target/bin/cii-start.sh slave"
+                elif [ "${params[1]}" == 'master' ];then
+                printf "********启动${params[0]}的采集平台[master]********\n"
+                ssh $sshUser@${params[0]} "$target/bin/cii-start.sh master"
             fi
             let i++
         done
@@ -271,18 +285,6 @@ main(){
             target=${params[2]}'/cii_da'
             printf "********启动${params[0]}的kafka********\n"
             ssh $sshUser@${params[0]} "export JAVA_HOME=$target/jdk && JMX_PORT=${kaConf[2]} $target/kafka/bin/kafka-server-start.sh -daemon $target/kafka/config/server.properties"
-            if [ "${params[1]}" == 'master' ];then
-                printf "********启动${params[0]}的采集平台[master]********\n"
-                local params=''
-                for v in ${address[*]};do
-                    if [[ ${#params} -eq 0 ]];then
-                        params="$v"
-                    else
-                        params=${params}' '$v
-                    fi
-                done
-                ssh $sshUser@${params[0]} "$target/bin/cii-start.sh daemon master $params"
-            fi
         done
         # rm -rf $dir/clusterConf
         rm -rf $dir

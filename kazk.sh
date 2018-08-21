@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 usage(){
     printf  "USAGE: $0 option\n"
-    printf  "       -start 启动zookeeper和kafka\n"
-    printf  "       -stop 停止zookeeper和kafka\n"
+    printf  "       -start ka|zk 启动kafka或者zookeeper\n"
+    printf  "       -stop  ka|zk  停止kafka或者zookeeper\n"
 }
-if [ $# -lt 1 ];then
+if [ $# -lt 2 ];then
     usage
     exit 1
 fi
@@ -19,42 +19,61 @@ esac
 
 dir=`cd $(dirname $0)/..;pwd`
 if [ "$1" == '-start' ];then
-    if [ -d $dir/kafka ];then
-        printf "**********停止启动间隔过短kafka启动失败时再执行一次start即可**********\n"
+    if [ -d $dir/kafka -a -d $dir/jdk ];then
         export JAVA_HOME=$dir'/jdk'
-        PIDS=$(ps ax | grep -i 'quorum.QuorumPeerMain' | grep java | grep -v grep | awk '{print $1}')
-        if [ -z "$PIDS" ];then
-            printf "==========启动zookeeper==========\n"
-            `$dir/kafka/bin/zookeeper-server-start.sh -daemon $dir/kafka/config/zookeeper.properties`
-        else printf "==========zookeeper已启动==========\n"
-        fi
-        PIDS=$(ps ax | grep -i 'kafka.Kafka' | grep java | grep -v grep | awk '{print $1}')
-        if [ -z "$PIDS" ];then
-            printf "===========启动kafka==========\n"
-            printf '请输入kafka的JMX端口:\n'
-            read port
-            `JMX_PORT=${port} $dir/kafka/bin/kafka-server-start.sh -daemon $dir/kafka/config/server.properties`
-        else printf "==========kafka已启动==========\n"
+        if [ "$2" == 'ka' ];then
+            PIDS=$(ps ax | grep -i 'quorum.QuorumPeerMain' | grep java | grep -v grep | awk '{print $1}')
+            if [ -z "$PIDS" ];then
+                printf "请先启动zookeeper\n"
+                exit 1
+            fi
+            PIDS=$(ps ax | grep -i 'kafka.Kafka' | grep java | grep -v grep | awk '{print $1}')
+            if [ -z "$PIDS" ];then
+                printf '请输入kafka的JMX端口:\n'
+                read port
+                `JMX_PORT=${port} $dir/kafka/bin/kafka-server-start.sh -daemon $dir/kafka/config/server.properties`
+                printf "kafka启动完成\n"
+            else printf "kafka已启动\n"
+            fi
+            elif [ "$2" == 'zk' ];then
+            PIDS=$(ps ax | grep -i 'quorum.QuorumPeerMain' | grep java | grep -v grep | awk '{print $1}')
+            if [ -z "$PIDS" ];then
+                `$dir/kafka/bin/zookeeper-server-start.sh -daemon $dir/kafka/config/zookeeper.properties`
+                printf "zookeeper启动完成\n"
+            else printf "zookeeper已启动\n"
+            fi
+        else
+            printf "param $2 is undefined!"
+            usage
+            exit 1
         fi
     else
-        printf "$dir/kafka is not exit...\n"
+        printf "$dir/kafka or $dir/jdk is not exit...\n"
     fi
     elif [ "$1" == '-stop' ];then
-    printf "==========停止kafka==========\n"
-    PIDS=$(ps ax | grep -i 'kafka.Kafka' | grep java | grep -v grep | awk '{print $1}')
-    if [ ! -z "$PIDS" ];then
-        for pid in $PIDS
-        do
-            kill -9 $pid
-        done
-    fi
-    printf "==========停止zookeeper==========\n"
-    PIDS=$(ps ax | grep -i 'quorum.QuorumPeerMain' | grep java | grep -v grep | awk '{print $1}')
-    if [ ! -z "$PIDS" ];then
-        for pid in $PIDS
-        do
-            kill -9 $pid
-        done
+    if [ "$2" == 'ka' ];then
+        PIDS=$(ps ax | grep -i 'kafka.Kafka' | grep java | grep -v grep | awk '{print $1}')
+        if [ ! -z "$PIDS" ];then
+            for pid in $PIDS
+            do
+                kill -9 $pid
+            done
+        fi
+        printf "kafka进程退出\n"
+        elif [ "$2" == 'zk' ];then
+        PIDS=$(ps ax | grep -i 'kafka.Kafka' | grep java | grep -v grep | awk '{print $1}')
+        if [ ! -z "$PIDS" ];then
+            printf "请先停止kafka\n"
+            exit 1
+        fi
+        PIDS=$(ps ax | grep -i 'quorum.QuorumPeerMain' | grep java | grep -v grep | awk '{print $1}')
+        if [ ! -z "$PIDS" ];then
+            for pid in $PIDS
+            do
+                kill -9 $pid
+            done
+        fi
+        printf "zookeeper进程退出\n"
     fi
 else
     printf "commmand $1 is not defined...\n"

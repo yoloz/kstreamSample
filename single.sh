@@ -1,6 +1,15 @@
 #!/usr/bin/env bash
-kaDir=''
-zkDir=''
+declare -a ipArr
+
+getLocalAddr(){
+    local i=0
+    ips=`ip addr show|grep -v 'inet6'|grep 'inet'|awk '{print $2}'|awk -F/ '{print $1}'`
+    for ip in $ips;do
+        ipArr[$i]="$ip"
+        let i++;
+    done
+}
+
 usage(){
     printf  "USAGE: $0 option\n"
     printf  "       -i 安装并启动\n"
@@ -70,39 +79,36 @@ if [ "$1" == '-i' ];then
     sleep 2
     `JMX_PORT=${jmxPort} $dir/kafka/bin/kafka-server-start.sh -daemon $dir/kafka/config/server.properties`
     echo "##################采集平台配置###################"
-    Addr='127.0.0.1'
-    listAddr(){
-        echo "请从下列选项中选择采集平台的访问地址:"
-        echo ""
-        ips=`ip addr show | grep "inet" | awk '{print $2}' | awk -F/ '{print $1}'`
-        for s in $ips
-        do
-            echo $s
-        done
-        read addr
-        Addr=$addr
-    }
-    retry(){
-        listAddr
-        if [[ "$Addr" =~ ^([0-9]{1,3}.){3}[0-9]{1,3}$ ]];then
-            echo "window.g = {" > $dir/web/config.js
-            echo "IP:'"$Addr"'," >> $dir/web/config.js
-            echo "请输入采集平台的访问端口:"
-            read PORT
-            echo "PORT:$PORT" >> $dir/web/config.js
-            echo "}" >> $dir/web/config.js
-            echo 'port='$PORT >> $dir/conf/server.conf
-            printf '请输入安装mysql的机器IP:\n'
-            read host
-            echo 'dbhost='$host >> $dir/conf/server.conf
-        else
-            echo "********IP格式错误(IPV4)********"
-            retry
-        fi
-    }
-    retry
+    getLocalAddr
+    echo "请从下列选项中(1-${#ipArr[@]})选择采集平台的访问地址:"
+    for i in $(seq 1 ${#ipArr[*]});do
+        printf "$i ${ipArr[i-1]}\n"
+    done
+    read num
+    if [ $num -lt 1 -o $num -gt ${#ipArr[*]} ];then
+        echo "$num的范围在(1-${#ipArr[@]}),选择错误!"
+        exit 1
+    fi
+    Addr=${ipArr[$num-1]}
+    # printf "更新/etc/hosts文件\n"
+    echo "$Addr $HOSTNAME" >> /etc/hosts
+    # if [[ "$Addr" =~ ^([0-9]{1,3}.){3}[0-9]{1,3}$ ]];then
+    echo "window.g = {" > $dir/web/config.js
+    echo "IP:'"$Addr"'," >> $dir/web/config.js
+    echo "请输入采集平台的访问端口:"
+    read PORT
+    echo "PORT:$PORT" >> $dir/web/config.js
+    echo "}" >> $dir/web/config.js
+    echo 'port='$PORT >> $dir/conf/server.conf
+    printf '请输入安装mysql的机器IP:\n'
+    read host
+    echo 'dbhost='$host >> $dir/conf/server.conf
+    # else
+    #     echo "********IP格式错误(IPV4)********"
+    #     exit 1
+    # fi
     echo "##################启动采集平台###################"
-    $dir/bin/cii-start.sh daemon single
+    $dir/bin/cii-start.sh 'single'
     elif [ "$1" == '-un' ];then
     printf '请输入kafka数据目录:\n'
     read kaPath

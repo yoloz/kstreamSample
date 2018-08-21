@@ -1,26 +1,28 @@
 # 准备mysql数据库
 ## 使用已有的MYSQL
-* 新建库并初始化数据
+1. 新建库并初始化数据
 ```
 mysql -u用户 -h地址 -p
-输入密码
+#输入密码
 mysql> create database sdas;
 mysql> use sdas;
 mysql> source xxx/cii_da/config/sdas.sql
 mysql> exit;
 ```
-* 修改采集平台配置文件 xxx/cii_da/conf/server.conf：
+2. 修改采集平台配置文件 xxx/cii_da/conf/server.conf：
 ```
 dbport #mysql数据库端口
 dbuser #mysql用户
 dbpass #mysql用户密码
 ```
 ## 需要重新安装MYSQL
+> *安装脚本自带初始化数据库及数据* 
 ```
 xxx/cii_da/bin/mysql.sh  #安装mysql
 xxx/cii_da/bin/un_mysql.sh  #卸载mysql
 ```
 # 系统安装卸载更新
+*系统安装中会更新/etc/hosts文件(添加机器名和ip地址的映射)，方便kafka客户端访问*
 ## 单机
 ```
 xxx/cii_da/bin/single.sh
@@ -29,16 +31,19 @@ xxx/cii_da/bin/single.sh
 -up patch.tar.gz 更新补丁
 ```
 ## 集群
+> 注意：
+> * 操作前需要配置xxx/cii_da/bin/nodes文件,文件内有说明如何配置；
+> * 建议配置master到其他机器的ssh免密登陆(包括master到master)，否则安装过程中需要多次输入密码操作；
+>   ```
+>   ssh-keygen -t rsa  #一路回车即可
+>   ssh-copy-id -i ~/.ssh/id_rsa.pub root@xx.xx.xx.xx #将生成的公钥复制到xx.xx.xx.xx上(本机也需复制一份)
+>   ```
 ```
 xxx/cii_da/bin/cluster.sh
 -i 安装并启动
 -un 卸载
 -up patch.tar.gz 更新补丁
 ```
-* 注意：
-     >操作前需要配置xxx/cii_da/bin/nodes文件,文件内有说明如何配置；
-
-     >建议配置master到其他机器的ssh免密登陆(包括master到master)，否则安装过程中需要多次输入密码操作；
 # 补丁压缩包格式
 * patch_yyyyMMdd.tar.gz
 >yyyyMMdd对应于待更新的版本yyyyMMdd,不是补丁包的打包日期
