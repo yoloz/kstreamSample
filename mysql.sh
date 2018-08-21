@@ -44,8 +44,7 @@ cp $dir/config/my.cnf /etc/
 
 #mysql设置
 function mysql_config() {
-service mysqld start
-service mysqld stop
+mysqld --initialize
 mysqld_safe --skip-grant-tables &
 printf "\n"
 <<EOF
