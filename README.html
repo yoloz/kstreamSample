@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <title>万能采集平台简易使用手册</title>
+</head>
+
+<body>
+    <h1>准备mysql数据库</h1>
+
+    <h2>使用已有的MYSQL</h2>
+
+    <ol>
+        <li>新建库并初始化数据
+            <pre>
+                mysql -u用户 -h地址 -p
+                #输入密码
+                mysql&gt; create database sdas; 
+                mysql&gt; use sdas; 
+                mysql&gt; source xxx/cii_da/config/sdas.sql 
+                mysql&gt; exit;
+            </pre>
+        </li>
+        <li>修改采集平台配置文件 xxx/cii_da/conf/server.conf：
+            <pre>
+                dbport #mysql数据库端口
+                dbuser #mysql用户
+                dbpass #mysql用户密码
+            </pre>
+        </li>
+    </ol>
+    <h2>需要重新安装MYSQL</h2>
+    <blockquote><i>安装脚本自带初始化数据库及数据</i></blockquote>
+    <pre>
+        xxx/cii_da/bin/mysql.sh  #安装mysql
+        xxx/cii_da/bin/un_mysql.sh  #卸载mysql
+    </pre>
+
+    <h1>系统安装卸载更新</h1>
+
+    <i>系统安装中会更新/etc/hosts文件(添加机器名和ip地址的映射)，方便kafka客户端访问</i>
+
+    <h2>单机</h2>
+    <pre>
+        xxx/cii_da/bin/single.sh
+        -i 安装并启动
+        -un 卸载
+        -up patch.tar.gz 更新补丁
+    </pre>
+
+    <h2>集群</h2>
+    <pre>
+        xxx/cii_da/bin/cluster.sh
+        -i 安装并启动
+        -un 卸载
+        -up patch.tar.gz 更新补丁
+       </pre>
+    <blockquote>
+        注意：
+        <ul>
+            <li> 操作前需要配置xxx/cii_da/bin/nodes文件,文件内有说明如何配置；</li>
+            <li> 建议配置master到其他机器的ssh免密登陆(包括master到master)，否则安装过程中需要多次输入密码操作；</li>
+        </ul>
+    </blockquote>
+    <pre>
+        ssh-keygen -t rsa  #一路回车即可
+        ssh-copy-id -i ~/.ssh/id_rsa.pub root@xx.xx.xx.xx #将生成的公钥复制到xx.xx.xx.xx上(本机也需复制一份)
+    </pre>
+
+    <h1>补丁压缩包格式</h1>
+    <ul>
+        <li>patch_yyyyMMdd.tar.gz &gt;yyyyMMdd对应于待更新的版本yyyyMMdd,不是补丁包的打包日期
+        </li>
+        <li>补丁包目录结构如下(不要求全部都有):
+            <pre>
+                lib/       目录，存放第三方jar 
+                cii_da.jar 采集系统后台jar文件
+                web/       目录，存放编译后的页面静态文件
+            </pre>
+        </li>
+        <li>更新完成后会在xxx/cii_da目录下生成update.log文件，内容格式如下：
+            <pre>yyyy-mm-dd,HH:mm:ss=&gt;补丁包名(patch_yyyyMMdd)</pre>
+        </li>
+    </ul>
+
+    <h1>辅助脚本说明</h1>
+
+    <pre>
+    xxx/cii_da/bin/cii_start.sh|cii_stop.sh #采集服务单独启动停止
+    xxx/cii_da/bin/kazk.sh  #kafka/zookeepr启动停止
+    </pre>
+
+    <h1>web访问方式</h1>
+
+    <p>浏览器访问http://ip:port/static 访问数据采集系统平台(集群访问master机器)</p>
+
+    <h1>目录文件结构说明</h1>
+
+    <ul>
+        <li>目录结构说明：
+            <pre>
+                bin 脚本目录；
+                conf 配置目录；
+                config mysql,kafka配置文件；
+                lib 第三方jar;
+                libs jdk,kafka,logstash压缩包；
+                mysql5.7.20 mysql安装包；
+                jdk jdk解压目录；
+                kafka kafka解压目录；
+                logstash logstash解压目录；
+                web 静态页面目录；
+                app 流计算服务目录；
+                da 采集服务目录；
+                logs 运行日志目录；
+            </pre>
+        </li>
+        <li>文件说明:
+            <pre>
+                conf/server.conf 采集平台配置文件
+                config/sdas.sql 数据库初始化文件
+                config/my.cnf mysql数据库配置文件
+                config/server.properties kafka初始配置文件
+                config/zookeeper.properties zk初始配置文件
+            </pre>
+        </li>
+    </ul>
+</body>
+
+</html>
