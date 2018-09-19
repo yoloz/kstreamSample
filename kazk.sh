@@ -16,18 +16,25 @@ case $1 in
     *)
     ;;
 esac
-
+zkPID(){
+    # echo $(ps ax | grep -i 'quorum.QuorumPeerMain' | grep java | grep -v grep | awk '{print $1}')
+    echo $(ps ax | grep -i 'zookeeper-gc.log' | grep java | grep -v grep | awk '{print $1}')
+}
+kaPID(){
+    # echo $(ps ax | grep -i 'kafka.Kafka' | grep java | grep -v grep | awk '{print $1}')
+    echo $(ps ax | grep -i 'kafkaServer-gc.log' | grep java | grep -v grep | awk '{print $1}')
+}
 dir=`cd $(dirname $0)/..;pwd`
 if [ "$1" == '-start' ];then
     if [ -d $dir/kafka -a -d $dir/jdk ];then
         export JAVA_HOME=$dir'/jdk'
         if [ "$2" == 'ka' ];then
-            PIDS=$(ps ax | grep -i 'quorum.QuorumPeerMain' | grep java | grep -v grep | awk '{print $1}')
+            PIDS=`zkPID`
             if [ -z "$PIDS" ];then
                 printf "请先启动zookeeper\n"
                 exit 1
             fi
-            PIDS=$(ps ax | grep -i 'kafka.Kafka' | grep java | grep -v grep | awk '{print $1}')
+            PIDS=`kaPID`
             if [ -z "$PIDS" ];then
                 printf '请输入kafka的JMX端口:\n'
                 read port
@@ -36,7 +43,7 @@ if [ "$1" == '-start' ];then
             else printf "kafka已启动\n"
             fi
             elif [ "$2" == 'zk' ];then
-            PIDS=$(ps ax | grep -i 'quorum.QuorumPeerMain' | grep java | grep -v grep | awk '{print $1}')
+            PIDS=`zkPID`
             if [ -z "$PIDS" ];then
                 `$dir/kafka/bin/zookeeper-server-start.sh -daemon $dir/kafka/config/zookeeper.properties`
                 printf "zookeeper启动完成\n"
@@ -52,7 +59,7 @@ if [ "$1" == '-start' ];then
     fi
     elif [ "$1" == '-stop' ];then
     if [ "$2" == 'ka' ];then
-        PIDS=$(ps ax | grep -i 'kafka.Kafka' | grep java | grep -v grep | awk '{print $1}')
+        PIDS=`kaPID`
         if [ ! -z "$PIDS" ];then
             for pid in $PIDS
             do
@@ -61,12 +68,12 @@ if [ "$1" == '-start' ];then
         fi
         printf "kafka进程退出\n"
         elif [ "$2" == 'zk' ];then
-        PIDS=$(ps ax | grep -i 'kafka.Kafka' | grep java | grep -v grep | awk '{print $1}')
+        PIDS=`kaPID`
         if [ ! -z "$PIDS" ];then
             printf "请先停止kafka\n"
             exit 1
         fi
-        PIDS=$(ps ax | grep -i 'quorum.QuorumPeerMain' | grep java | grep -v grep | awk '{print $1}')
+        PIDS=`zkPID`
         if [ ! -z "$PIDS" ];then
             for pid in $PIDS
             do
