@@ -3,7 +3,7 @@
 declare -a address
 
 usage(){
-    printf "USAGE: $0 master|slave|single\n"
+    printf "USAGE: $0 master Allow-Origin...|slave|single Allow-Origin...\n"
 }
 
 readNodes(){
@@ -67,12 +67,12 @@ main(){
                 params=${params}' '$v
             fi
         done
-        nohup ${JAVA} ${KS_ROOT_DIR} ${KS_LOG4J_OPTS} -cp ${CLASSPATH} com.unimas.RestServer 'master' $params > "$log_dir/cii.out" 2>&1 < /dev/null &
+        nohup ${JAVA} ${KS_ROOT_DIR} ${KS_LOG4J_OPTS} -cp ${CLASSPATH} com.unimas.RestServer $* $params > "$log_dir/cii.out" 2>&1 < /dev/null &
         # nohup ${JAVA} ${KS_ROOT_DIR} ${KS_LOG4J_OPTS} -cp ${CLASSPATH} com.unimas.RestServer 'master' > "$log_dir/cii.out" 2>&1 < /dev/null &
         elif [ "$1" == 'slave' ];then
-        nohup ${JAVA} ${KS_ROOT_DIR} ${KS_LOG4J_OPTS} -cp ${CLASSPATH} com.unimas.RestServer 'slave' > "$log_dir/cii.out" 2>&1 < /dev/null &
+        nohup ${JAVA} ${KS_ROOT_DIR} ${KS_LOG4J_OPTS} -cp ${CLASSPATH} com.unimas.RestServer $* > "$log_dir/cii.out" 2>&1 < /dev/null &
         elif [ "$1" == 'single' ];then
-        nohup ${JAVA} ${KS_ROOT_DIR} ${KS_LOG4J_OPTS} -cp ${CLASSPATH} com.unimas.RestServer 'single' > "$log_dir/cii.out" 2>&1 < /dev/null &
+        nohup ${JAVA} ${KS_ROOT_DIR} ${KS_LOG4J_OPTS} -cp ${CLASSPATH} com.unimas.RestServer $* > "$log_dir/cii.out" 2>&1 < /dev/null &
     else
         printf "command $1 undefined!\n"
         usage

@@ -80,7 +80,7 @@ if [ "$1" == '-i' ];then
     `JMX_PORT=${jmxPort} $dir/kafka/bin/kafka-server-start.sh -daemon $dir/kafka/config/server.properties`
     echo "##################采集平台配置###################"
     getLocalAddr
-    echo "请从下列选项中(1-${#ipArr[@]})选择采集平台的访问地址:"
+    echo "请从下列选项中(1-${#ipArr[@]})选择采集平台的IP地址:"
     for i in $(seq 1 ${#ipArr[*]});do
         printf "$i ${ipArr[i-1]}\n"
     done
@@ -108,7 +108,7 @@ if [ "$1" == '-i' ];then
     #     exit 1
     # fi
     echo "##################启动采集平台###################"
-    $dir/bin/cii-start.sh 'single'
+    $dir/bin/cii-start.sh 'single' "$Addr" "$HOSTNAME"
     elif [ "$1" == '-un' ];then
     printf '请输入kafka数据目录:\n'
     read kaPath

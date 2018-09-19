@@ -275,7 +275,7 @@ main(){
                 ssh $sshUser@${params[0]} "$target/bin/cii-start.sh slave"
                 elif [ "${params[1]}" == 'master' ];then
                 printf "********启动${params[0]}的采集平台[master]********\n"
-                ssh $sshUser@${params[0]} "$target/bin/cii-start.sh master"
+                ssh $sshUser@${params[0]} "$target/bin/cii-start.sh master ${params[0]} $HOSTNAME"
             fi
             let i++
         done

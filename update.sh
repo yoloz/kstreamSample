@@ -39,7 +39,7 @@ if [ -f $dir/$patch/cii_da.jar ];then
     sleep 1
     printf "restart cii_da server\n"
     $dir/bin/cii-stop.sh
-    $dir/bin/cii-start.sh daemon
+    $dir/bin/cii-start.sh single
 fi
 printf "clear patch file\n"
 rm -rf $dir/`basename $1`

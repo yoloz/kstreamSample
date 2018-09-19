@@ -7,14 +7,16 @@ if [ ! -z "$PIDS" ]; then
         kill -9 $pid
     done
 fi
-PIDS=$(ps ax | grep -i 'kafka.Kafka' | grep java | grep -v grep | awk '{print $1}')
+#PIDS=$(ps ax | grep -i 'kafka.Kafka' | grep java | grep -v grep | awk '{print $1}')
+PIDS=$(ps ax | grep -i 'kafkaServer-gc.log' | grep java | grep -v grep | awk '{print $1}')
 if [ ! -z "$PIDS" ];then
     for pid in $PIDS
     do
         kill -9 $pid
     done
 fi
-PIDS=$(ps ax | grep -i 'quorum.QuorumPeerMain' | grep java | grep -v grep | awk '{print $1}')
+#PIDS=$(ps ax | grep -i 'quorum.QuorumPeerMain' | grep java | grep -v grep | awk '{print $1}')
+PIDS=$(ps ax | grep -i 'zookeeper-gc.log' | grep java | grep -v grep | awk '{print $1}')
 if [ ! -z "$PIDS" ];then
     for pid in $PIDS
     do
