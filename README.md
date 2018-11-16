@@ -61,8 +61,3 @@ KStream/
 >>* --input-topics        输入源topics(t1,t2),将偏移量重置为最早的可用偏移量.                      
 >>* --intermediate-topics 通过方法through()使用的中间topics(t1,t2),偏移量直接跳到最后.                  
 >>* --zookeeper           Zookeeper地址(HOST:POST)默认:localhost:2181.deprecated in 1.0 
-
-
-
-
-
