@@ -1,13 +1,29 @@
 #!/usr/bin/env bash
-declare -a ipArr
+# declare -a ipArr
+declare -a parameters
+dir=$(cd `dirname $0`/..;pwd)
+# getLocalAddr(){
+#     local i=0
+#     ips=`ip addr show|grep -v 'inet6'|grep 'inet'|awk '{print $2}'|awk -F/ '{print $1}'`
+#     for ip in $ips;do
+#         ipArr[$i]="$ip"
+#         let i++;
+#     done
+# }
 
-getLocalAddr(){
+initParameter(){
     local i=0
-    ips=`ip addr show|grep -v 'inet6'|grep 'inet'|awk '{print $2}'|awk -F/ '{print $1}'`
-    for ip in $ips;do
-        ipArr[$i]="$ip"
-        let i++;
-    done
+    while read line || [[ -n ${line} ]]
+    do
+        if [ ${#line} -eq 0 ];then
+            continue
+            elif [ ${line:0:1} == '#' ];then
+            continue
+        fi
+        parameters[$i]="$line"
+        let i++
+    done < $dir/bin/params
+    readonly parameters
 }
 
 usage(){
@@ -29,44 +45,50 @@ case $1 in
     ;;
 esac
 
-dir=$(cd `dirname $0`/..;pwd)
-
 if [ "$1" == '-i' ];then
-    echo "##################install jdk###################"
+    echo "################## read params file ###################"
+    initParameter
+    if [ ${#parameters[*]} -lt 7 ];then
+        printf 'params file文件格式错误\n'
+        exit 1
+    fi
+    echo "################## install jdk# #######################"
     if [ -d $dir/jdk ];then
         rm -rf $dir/jdk
     fi
     tar -zxpf $dir/libs/jdk-8u151-linux-x64.tar.gz -C $dir/
     mv $dir/jdk1.8.0_151 $dir/jdk
-    echo "##################install kafka###################"
+    echo "################## install kafka ######################"
     if [ -d $dir/kafka ];then
         rm -rf $dir/kafka
     fi
     tar -zxpf $dir/libs/kafka_2.11-0.11.0.1.tgz -C $dir/
     mv $dir/kafka_2.11-0.11.0.1 $dir/kafka
-    printf '请输入kafka数据目录:\n'
-    read kaPath
-    mkdir -p ${kaPath}
-    printf '请输入kafka监听端口:\n'
-    read kaPort
-    printf '请输入kafka的JMX端口:\n'
-    read jmxPort
-    printf '请输入zookeeper数据目录:\n'
-    read zkPath
-    mkdir -p ${zkPath}
-    printf '请输入zookeeper监听端口:\n'
-    read zkPort
+    # printf '请输入kafka数据目录:\n'
+    # read kaPath
+    # mkdir -p ${kaPath}
+    mkdir -p ${parameters[2]}
+    # printf '请输入kafka监听端口:\n'
+    # read kaPort
+    # printf '请输入kafka的JMX端口:\n'
+    # read jmxPort
+    # printf '请输入zookeeper数据目录:\n'
+    # read zkPath
+    # mkdir -p ${zkPath}
+    mkdir -p ${parameters[5]}
+    # printf '请输入zookeeper监听端口:\n'
+    # read zkPort
     cp $dir/config/server.properties $dir/kafka/config/server.properties
     echo "broker.id=0" >> $dir/kafka/config/server.properties
-    echo "listeners=PLAINTEXT://:${kaPort}" >> $dir/kafka/config/server.properties
-    echo "log.dirs=${kaPath}" >> $dir/kafka/config/server.properties
-    echo "zookeeper.connect=localhost:${zkPort}/kafka" >> $dir/kafka/config/server.properties
+    echo "listeners=PLAINTEXT://:${parameters[3]}" >> $dir/kafka/config/server.properties
+    echo "log.dirs=${parameters[2]}" >> $dir/kafka/config/server.properties
+    echo "zookeeper.connect=localhost:${parameters[6]}/kafka" >> $dir/kafka/config/server.properties
     cp $dir/config/zookeeper.properties $dir/kafka/config/zookeeper.properties
     echo 'tickTime=2000' >> $dir/kafka/config/zookeeper.properties
-    echo "dataDir=${zkPath}/data" >> $dir/kafka/config/zookeeper.properties
-    echo "dataLogDir=${zkPath}/log" >> $dir/kafka/config/zookeeper.properties
-    echo "clientPort=${zkPort}" >> $dir/kafka/config/zookeeper.properties
-    echo "##################install logstash###################"
+    echo "dataDir=${parameters[5]}/data" >> $dir/kafka/config/zookeeper.properties
+    echo "dataLogDir=${parameters[5]}/log" >> $dir/kafka/config/zookeeper.properties
+    echo "clientPort=${parameters[6]}" >> $dir/kafka/config/zookeeper.properties
+    echo "################## install logstash ###################"
     if [ -d $dir/logstash ];then
         rm -rf $dir/logstash
     fi
@@ -74,47 +96,58 @@ if [ "$1" == '-i' ];then
     mv $dir/logstash-6.2.4 $dir/logstash
     
     export JAVA_HOME=$dir'/jdk'
-    echo "##################start kafka zk###################"
-    `$dir/kafka/bin/zookeeper-server-start.sh -daemon $dir/kafka/config/zookeeper.properties`
-    sleep 2
-    `JMX_PORT=${jmxPort} $dir/kafka/bin/kafka-server-start.sh -daemon $dir/kafka/config/server.properties`
-    echo "##################采集平台配置###################"
-    getLocalAddr
-    echo "请从下列选项中(1-${#ipArr[@]})选择采集平台的IP地址:"
-    for i in $(seq 1 ${#ipArr[*]});do
-        printf "$i ${ipArr[i-1]}\n"
-    done
-    read num
-    if [ $num -lt 1 -o $num -gt ${#ipArr[*]} ];then
-        echo "$num的范围在(1-${#ipArr[@]}),选择错误!"
-        exit 1
+    
+    echo "################## 采集平台配置 #######################"
+    # getLocalAddr
+    # echo "请从下列选项中(1-${#ipArr[@]})选择采集平台的IP地址:"
+    # for i in $(seq 1 ${#ipArr[*]});do
+    #     printf "$i ${ipArr[i-1]}\n"
+    # done
+    # read num
+    # if [ $num -lt 1 -o $num -gt ${#ipArr[*]} ];then
+    #     echo "$num的范围在(1-${#ipArr[@]}),选择错误!"
+    #     exit 1
+    # fi
+    # Addr=${ipArr[$num-1]}
+    Addr=${parameters[9]}
+    hostName=$HOSTNAME
+    if [ "${parameters[10]}"x != "HOSTNAME"x ];then
+        hostName=${parameters[10]}
     fi
-    Addr=${ipArr[$num-1]}
     # printf "更新/etc/hosts文件\n"
-    echo "$Addr $HOSTNAME" >> /etc/hosts
+    echo "$Addr $hostName" >> /etc/hosts
     # if [[ "$Addr" =~ ^([0-9]{1,3}.){3}[0-9]{1,3}$ ]];then
     echo "window.g = {" > $dir/web/config.js
     echo "IP:'"$Addr"'," >> $dir/web/config.js
-    echo "请输入采集平台的访问端口:"
-    read PORT
-    echo "PORT:$PORT" >> $dir/web/config.js
+    # echo "请输入采集平台的访问端口:"
+    # read PORT
+    echo "PORT:${parameters[1]}" >> $dir/web/config.js
     echo "}" >> $dir/web/config.js
-    echo 'port='$PORT >> $dir/conf/server.conf
-    printf '请输入安装mysql的机器IP:\n'
-    read host
-    echo 'dbhost='$host >> $dir/conf/server.conf
+    echo 'port='${parameters[1]} >> $dir/conf/server.conf
+    # printf '请输入安装mysql的机器IP:\n'
+    # read host
+    echo 'dbhost='${parameters[0]} >> $dir/conf/server.conf
     # else
     #     echo "********IP格式错误(IPV4)********"
     #     exit 1
     # fi
-    echo "##################启动采集平台###################"
-    $dir/bin/cii-start.sh 'single' "$Addr" "$HOSTNAME"
+    echo "################## start kafka zk #####################"
+    `$dir/kafka/bin/zookeeper-server-start.sh -daemon $dir/kafka/config/zookeeper.properties`
+    sleep 2
+    `JMX_PORT=${parameters[4]} $dir/kafka/bin/kafka-server-start.sh -daemon $dir/kafka/config/server.properties`
+    echo "################## 启动采集平台 #######################"
+    $dir/bin/cii-start.sh 'single'
     elif [ "$1" == '-un' ];then
-    printf '请输入kafka数据目录:\n'
-    read kaPath
-    printf '请输入zookeeper数据目录:\n'
-    read zkPath
-    $dir/bin/un_install.sh ${kaPath} ${zkPath}
+    # printf '请输入kafka数据目录:\n'
+    # read kaPath
+    # printf '请输入zookeeper数据目录:\n'
+    # read zkPath
+    initParameter
+    if [ ${#parameters[*]} -lt 7 ];then
+        printf 'params file文件格式错误\n'
+        exit 1
+    fi
+    $dir/bin/un_install.sh ${parameters[2]} ${parameters[5]}
     elif [ "$1" == '-up' ];then
     if [ $# -lt 2 ];then
         usage

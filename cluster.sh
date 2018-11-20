@@ -4,8 +4,9 @@
 dir=`cd $(dirname $0)/..;pwd`
 sshUser='root'
 declare -a nodeConf
-declare -a zkConf
-declare -a kaConf
+# declare -a zkConf
+# declare -a kaConf
+declare -a parameters
 
 usage(){
     printf  "USAGE: $0 option\n"
@@ -13,9 +14,23 @@ usage(){
     printf  "       -un 卸载\n"
     printf  "       -up patch.tar.gz 更新补丁\n"
 }
+initParameter(){
+    local i=0
+    while read line || [[ -n ${line} ]]
+    do
+        if [ ${#line} -eq 0 ];then
+            continue
+            elif [ ${line:0:1} == '#' ];then
+            continue
+        fi
+        parameters[$i]="$line"
+        let i++
+    done < $dir/bin/params
+    readonly parameters
+}
 readNodes(){
     local i=0
-    while read line
+    while read line || [[ -n ${line} ]]
     do
         if [ ${#line} -eq 0 ];then
             continue
@@ -27,59 +42,59 @@ readNodes(){
     done < $dir/bin/nodes
     readonly nodeConf
 }
-confZK(){
-    if [ $[${#nodeConf[*]}%2] -eq 0 -a $[${#nodeConf[*]}-1] -le 1 ];then
-        printf '请输入zookeeper数据目录:\n'
-        read path
-        zkConf[0]="$path"
-        printf '请输入zookeeper监听端口:\n'
-        read port
-        zkConf[1]="$port"
-    else
-        printf '请输入zookeeper数据目录:\n'
-        read path
-        zkConf[0]="$path"
-        printf '请输入zookeeper监听端口:\n'
-        read port
-        zkConf[1]="$port"
-        printf '请输入zookeeper同步端口:\n'
-        read port
-        zkConf[2]="$port"
-        printf '请输入zookeeper选举端口:\n'
-        read port
-        zkConf[3]="$port"
-    fi
-    readonly zkConf
-}
-confKA(){
-    printf '请输入kafka数据目录:\n'
-    read path
-    kaConf[0]="$path"
-    printf '请输入kafka监听端口:\n'
-    read port
-    kaConf[1]="$port"
-    printf '请输入kafka的JMX端口:\n'
-    read port
-    kaConf[2]="$port"
-    readonly kaConf
-}
+# confZK(){
+#     if [ $[${#nodeConf[*]}%2] -eq 0 -a $[${#nodeConf[*]}-1] -le 1 ];then
+#         printf '请输入zookeeper数据目录:\n'
+#         read path
+#         zkConf[0]="$path"
+#         printf '请输入zookeeper监听端口:\n'
+#         read port
+#         zkConf[1]="$port"
+#     else
+#         printf '请输入zookeeper数据目录:\n'
+#         read path
+#         zkConf[0]="$path"
+#         printf '请输入zookeeper监听端口:\n'
+#         read port
+#         zkConf[1]="$port"
+#         printf '请输入zookeeper同步端口:\n'
+#         read port
+#         zkConf[2]="$port"
+#         printf '请输入zookeeper选举端口:\n'
+#         read port
+#         zkConf[3]="$port"
+#     fi
+#     readonly zkConf
+# }
+# confKA(){
+#     printf '请输入kafka数据目录:\n'
+#     read path
+#     kaConf[0]="$path"
+#     printf '请输入kafka监听端口:\n'
+#     read port
+#     kaConf[1]="$port"
+#     printf '请输入kafka的JMX端口:\n'
+#     read port
+#     kaConf[2]="$port"
+#     readonly kaConf
+# }
 getZKConnect(){
     local zc=''
     for l in ${nodeConf[@]};do
         params=(${l//;/ })
-        if [ ${#zkConf[@]} -eq 2 -a "${params[1]}" != 'master' ];then
-            zc=${params[0]}':'${zkConf[1]}
+        if [ ${#nodeConf[@]} -eq 2 -a "${params[1]}" != 'master' ];then
+            zc=${params[0]}':'${parameters[6]}
             elif [[ ${#nodeConf[*]} -gt 2 && $[${#nodeConf[*]}%2] -eq 0 && "${params[1]}" != 'master' ]];then
             if [[ ${#zc} -eq 0 ]];then
-                zc=${params[0]}':'${zkConf[1]}
+                zc=${params[0]}':'${parameters[6]}
             else
-                zc=${zc}','${params[0]}':'${zkConf[1]}
+                zc=${zc}','${params[0]}':'${parameters[6]}
             fi
             elif [[ ${#nodeConf[*]} -gt 2 && $[${#nodeConf[*]}%2] != 0 ]];then
             if [[ ${#zc} -eq 0 ]];then
-                zc=${params[0]}':'${zkConf[1]}
+                zc=${params[0]}':'${parameters[6]}
             else
-                zc=${zc}','${params[0]}':'${zkConf[1]}
+                zc=${zc}','${params[0]}':'${parameters[6]}
             fi
         fi
     done
@@ -95,8 +110,8 @@ createKAConf(){
         cp $dir/config/server.properties $dir/clusterConf
         mv $dir/clusterConf/server.properties $fn
         echo "broker.id=$i" >> $fn
-        echo "listeners=PLAINTEXT://:${kaConf[1]}" >> $fn
-        echo "log.dirs=${kaConf[0]}" >> $fn
+        echo "listeners=PLAINTEXT://:${parameters[3]}" >> $fn
+        echo "log.dirs=${parameters[2]}" >> $fn
         echo "zookeeper.connect=$_zk" >> $fn
         let i++
     done
@@ -108,15 +123,15 @@ getZKSP(){
         params=(${nodeConf[i]//;/ })
         if [[ $[${#nodeConf[*]}%2] -eq 0 && "${params[1]}" != 'master' ]];then
             if [ ${#zsp} -eq 0 ];then
-                zsp='server.'$i'='${params[0]}':'${zkConf[2]}':'${zkConf[3]}
+                zsp='server.'$i'='${params[0]}':'${parameters[7]}':'${parameters[8]}
             else
-                zsp=${zsp}';server.'$i'='${params[0]}':'${zkConf[2]}':'${zkConf[3]}
+                zsp=${zsp}';server.'$i'='${params[0]}':'${parameters[7]}':'${parameters[8]}
             fi
             elif [[ $[${#nodeConf[*]}%2] != 0 ]];then
             if [ ${#zsp} -eq 0 ];then
-                zsp='server.'$i'='${params[0]}':'${zkConf[2]}':'${zkConf[3]}
+                zsp='server.'$i'='${params[0]}':'${parameters[7]}':'${parameters[8]}
             else
-                zsp=${zsp}';server.'$i'='${params[0]}':'${zkConf[2]}':'${zkConf[3]}
+                zsp=${zsp}';server.'$i'='${params[0]}':'${parameters[7]}':'${parameters[8]}
             fi
         fi
         let i++
@@ -125,13 +140,13 @@ getZKSP(){
 }
 createZKConf(){
     printf '********生成ZK配置文件********\n'
-    if [[ ${#zkConf[@]} -eq 2 ]];then
+    if [[ ${#nodeConf[*]} -eq 2 ]];then
         cp $dir/config/zookeeper.properties $dir/clusterConf
         fn=$dir/clusterConf/zookeeper.properties
         echo 'tickTime=2000' >> $fn
-        echo "dataDir=${zkConf[0]}/data" >> $fn
-        echo "dataLogDir=${zkConf[0]}/log" >> $fn
-        echo "clientPort=${zkConf[1]}" >> $fn
+        echo "dataDir=${parameters[5]}/data" >> $fn
+        echo "dataLogDir=${parameters[5]}/log" >> $fn
+        echo "clientPort=${parameters[6]}" >> $fn
     else
         local i=0
         local zkSP=`getZKSP`
@@ -141,9 +156,9 @@ createZKConf(){
             fn=$dir/clusterConf/${params[0]}'zookeeper.properties'
             cp $dir/config/zookeeper.properties $dir/clusterConf
             mv $dir/clusterConf/zookeeper.properties $fn
-            echo "clientPort=${zkConf[1]}" >> $fn
-            echo "dataDir=${zkConf[0]}/data" >> $fn
-            echo "dataLogDir=${zkConf[0]}/log" >> $fn
+            echo "clientPort=${parameters[6]}" >> $fn
+            echo "dataDir=${parameters[5]}/data" >> $fn
+            echo "dataLogDir=${parameters[5]}/log" >> $fn
             echo 'tickTime=2000' >> $fn
             echo 'initLimit=5' >> $fn
             echo 'syncLimit=2' >> $fn
@@ -156,14 +171,14 @@ createZKConf(){
 }
 confServer(){
     printf '********采集平台配置********\n'
-    printf '请输入安装mysql的机器IP:\n'
-    read host
-    echo 'dbhost='$host >> $dir/conf/server.conf
-    printf '请输入采集平台web端口:\n'
-    read port
-    echo 'port='$port >> $dir/conf/server.conf
+    # printf '请输入安装mysql的机器IP:\n'
+    # read host
+    echo 'dbhost='${parameters[0]} >> $dir/conf/server.conf
+    # printf '请输入采集平台web端口:\n'
+    # read port
+    echo 'port='${parameters[1]} >> $dir/conf/server.conf
     echo "window.g = {" > $dir/web/config.js
-    echo "PORT:$port," >> $dir/web/config.js
+    echo "PORT:${parameters[1]}," >> $dir/web/config.js
 }
 copyResource(){
     scp $dir/bin/cii-start.sh $sshUser@$2:$1/bin
@@ -179,6 +194,7 @@ copyResource(){
         scp $dir/bin/cluster.sh $sshUser@$2:$1/bin
         scp $dir/bin/mysql.sh $sshUser@$2:$1/bin
         scp $dir/bin/nodes $sshUser@$2:$1/bin
+        scp $dir/bin/params $sshUser@$2:$1/bin
         scp $dir/bin/single.sh $sshUser@$2:$1/bin
         scp $dir/bin/un_mysql.sh $sshUser@$2:$1/bin
     fi
@@ -199,17 +215,17 @@ copyResource(){
     ssh $sshUser@$2 "$1/bin/hosts.sh"
 }
 remoteZK(){
-    if [ ${#zkConf[@]} -eq 2 -a "$3" != 'master' ];then
+    if [ ${#nodeConf[*]} -eq 2 -a "$3" != 'master' ];then
         scp $dir/clusterConf/zookeeper.properties $sshUser@$1:$2/kafka/config
-        ssh $sshUser@$1 "rm -rf ${zkConf[0]} && mkdir -p ${zkConf[0]}/data && mkdir -p ${zkConf[0]}/log"
+        ssh $sshUser@$1 "rm -rf ${parameters[5]} && mkdir -p ${parameters[5]}/data && mkdir -p ${parameters[5]}/log"
         ssh $sshUser@$1 "export JAVA_HOME=$2/jdk && $2/kafka/bin/zookeeper-server-start.sh -daemon $2/kafka/config/zookeeper.properties"
         printf "********启动$1的zk********\n"
         elif [[ ${#nodeConf[*]} -gt 2 && $[${#nodeConf[*]}%2] -eq 0 && "$3" != 'master' ]];then
-        ssh $sshUser@$1 "rm -rf ${zkConf[0]} && mkdir -p ${zkConf[0]}/data && mkdir -p ${zkConf[0]}/log && echo $4 > ${zkConf[0]}/data/myid"
+        ssh $sshUser@$1 "rm -rf ${parameters[5]} && mkdir -p ${parameters[5]}/data && mkdir -p ${parameters[5]}/log && echo $4 > ${parameters[5]}/data/myid"
         ssh $sshUser@$1 "export JAVA_HOME=$2/jdk && $2/kafka/bin/zookeeper-server-start.sh -daemon $2/kafka/config/zookeeper.properties"
         printf "********启动$1的zk********\n"
         elif [[ ${#nodeConf[*]} -gt 2 && $[${#nodeConf[*]}%2] != 0 ]];then
-        ssh $sshUser@$1 "rm -rf ${zkConf[0]} && mkdir -p ${zkConf[0]}/data && mkdir -p ${zkConf[0]}/log && echo $4 > ${zkConf[0]}/data/myid"
+        ssh $sshUser@$1 "rm -rf ${parameters[5]} && mkdir -p ${parameters[5]}/data && mkdir -p ${parameters[5]}/log && echo $4 > ${parameters[5]}/data/myid"
         ssh $sshUser@$1 "export JAVA_HOME=$2/jdk && $2/kafka/bin/zookeeper-server-start.sh -daemon $2/kafka/config/zookeeper.properties"
         printf "********启动$1的zk********\n"
     fi
@@ -239,6 +255,7 @@ main(){
         *)
         ;;
     esac
+    printf '###############read nodes file#################\n'
     readNodes
     if [ ${#nodeConf[*]} -le 1 ];then
         printf '至少两台机器\n'
@@ -249,8 +266,13 @@ main(){
     sshUser=$userName
     readonly sshUser
     if [ "$1" == '-i' ];then
-        confZK
-        confKA
+        # confZK
+        # confKA
+        initParameter
+        if [ ${#parameters[*]} -lt 7 ];then
+            printf 'params file文件格式错误\n'
+            exit 1
+        fi
         confServer
         rm -rf $dir/clusterConf
         mkdir $dir/clusterConf
@@ -268,14 +290,14 @@ main(){
                 echo "}" >> $dir/web/config.js
                 scp -r $dir/web $sshUser@${params[0]}:$target
             fi
-            ssh $sshUser@${params[0]} "rm -rf ${kaConf[0]} && mkdir -p ${kaConf[0]}"
+            ssh $sshUser@${params[0]} "rm -rf ${parameters[2]} && mkdir -p ${parameters[2]}"
             remoteZK ${params[0]} $target ${params[1]} $i
             if [ "${params[1]}" == 'slave' ];then
                 printf "********启动${params[0]}的采集平台[slave]********\n"
                 ssh $sshUser@${params[0]} "$target/bin/cii-start.sh slave"
                 elif [ "${params[1]}" == 'master' ];then
                 printf "********启动${params[0]}的采集平台[master]********\n"
-                ssh $sshUser@${params[0]} "$target/bin/cii-start.sh master ${params[0]} $HOSTNAME"
+                ssh $sshUser@${params[0]} "$target/bin/cii-start.sh master"
             fi
             let i++
         done
@@ -284,21 +306,26 @@ main(){
             params=(${v//;/ })
             target=${params[2]}'/cii_da'
             printf "********启动${params[0]}的kafka********\n"
-            ssh $sshUser@${params[0]} "export JAVA_HOME=$target/jdk && JMX_PORT=${kaConf[2]} $target/kafka/bin/kafka-server-start.sh -daemon $target/kafka/config/server.properties"
+            ssh $sshUser@${params[0]} "export JAVA_HOME=$target/jdk && JMX_PORT=${parameters[4]} $target/kafka/bin/kafka-server-start.sh -daemon $target/kafka/config/server.properties"
         done
         # rm -rf $dir/clusterConf
         rm -rf $dir
         elif [ "$1" == '-un' ];then
-        printf '请输入kafka数据目录:\n'
-        read kaPath
-        printf '请输入zookeeper数据目录:\n'
-        read zkPath
+        # printf '请输入kafka数据目录:\n'
+        # read kaPath
+        # printf '请输入zookeeper数据目录:\n'
+        # read zkPath
+        initParameter
+        if [ ${#parameters[*]} -lt 7 ];then
+            printf 'params file文件格式错误\n'
+            exit 1
+        fi
         for v in ${nodeConf[*]}
         do
             params=(${v//;/ })
             target=${params[2]}'/cii_da'
             printf "********卸载${params[0]}********\n"
-            ssh $sshUser@${params[0]} "$target/bin/un_install.sh $kaPath $zkPath"
+            ssh $sshUser@${params[0]} "$target/bin/un_install.sh ${parameters[2]} ${parameters[5]}"
         done
         elif [ "$1" == '-up' ];then
         if [ ! -f $2 ];then

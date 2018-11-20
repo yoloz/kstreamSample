@@ -1,25 +1,43 @@
 #!/usr/bin/env bash
 
 declare -a address
+declare -a parameters
 
 usage(){
     printf "USAGE: $0 master Allow-Origin...|slave|single Allow-Origin...\n"
 }
 
+readParams(){
+    local i=0
+    while read line || [[ -n ${line} ]]
+    do
+        if [ ${#line} -eq 0 ];then
+            continue
+            elif [ ${line:0:1} == '#' ];then
+            continue
+        fi
+        parameters[$i]="$line"
+        let i++
+    done < $1/bin/params
+    readonly parameters
+}
+
 readNodes(){
     if [ -f $1/bin/nodes ];then
         local i=0
-        while read line
+        while read line || [[ -n ${line} ]]
         do
             if [ ${#line} -eq 0 ];then
                 continue
                 elif [ ${line:0:1} == '#' ];then
                 continue
             fi
-            arr=(${line//;/ })
-            if [ "${arr[1]}" != 'master' ];then
-                address[$i]="${arr[0]}"
-            fi
+            # arr=(${line//;/ })
+            # if [ "${arr[1]}" != 'master' ];then
+            #     address[$i]="${arr[0]}"
+            # fi
+            # let i++
+            address[$i]="$line"
             let i++
         done < $1/bin/nodes
         readonly address
@@ -60,19 +78,33 @@ main(){
     if [ "$1" == 'master' ];then
         readNodes ${KS_DIR}
         local params=''
+        local masterIp=''
         for v in ${address[*]};do
-            if [[ ${#params} -eq 0 ]];then
-                params="$v"
+            arr=(${v//;/ })
+            if [ "${arr[1]}" != 'master' ];then
+                if [[ ${#params} -eq 0 ]];then
+                    params="${arr[0]}"
+                else
+                    params=${params}' '${arr[0]}
+                fi
             else
-                params=${params}' '$v
+                masterIp="${arr[0]}"
             fi
         done
-        nohup ${JAVA} ${KS_ROOT_DIR} ${KS_LOG4J_OPTS} -cp ${CLASSPATH} com.unimas.RestServer $* $params > "$log_dir/cii.out" 2>&1 < /dev/null &
-        # nohup ${JAVA} ${KS_ROOT_DIR} ${KS_LOG4J_OPTS} -cp ${CLASSPATH} com.unimas.RestServer 'master' > "$log_dir/cii.out" 2>&1 < /dev/null &
+        nohup ${JAVA} ${KS_ROOT_DIR} ${KS_LOG4J_OPTS} -cp ${CLASSPATH} com.unimas.RestServer $* \
+        "$masterIp" "$HOSTNAME" $params > "$log_dir/cii.out" 2>&1 < /dev/null &
         elif [ "$1" == 'slave' ];then
-        nohup ${JAVA} ${KS_ROOT_DIR} ${KS_LOG4J_OPTS} -cp ${CLASSPATH} com.unimas.RestServer $* > "$log_dir/cii.out" 2>&1 < /dev/null &
+        nohup ${JAVA} ${KS_ROOT_DIR} ${KS_LOG4J_OPTS} -cp ${CLASSPATH} com.unimas.RestServer $* \
+        > "$log_dir/cii.out" 2>&1 < /dev/null &
         elif [ "$1" == 'single' ];then
-        nohup ${JAVA} ${KS_ROOT_DIR} ${KS_LOG4J_OPTS} -cp ${CLASSPATH} com.unimas.RestServer $* > "$log_dir/cii.out" 2>&1 < /dev/null &
+        readParams ${KS_DIR}
+        Addr=${parameters[9]}
+        hostName=$HOSTNAME
+        if [ "${parameters[10]}"x != "HOSTNAME"x ];then
+            hostName=${parameters[10]}
+        fi
+        nohup ${JAVA} ${KS_ROOT_DIR} ${KS_LOG4J_OPTS} -cp ${CLASSPATH} com.unimas.RestServer $* \
+        "$Addr" "$hostName" > "$log_dir/cii.out" 2>&1 < /dev/null &
     else
         printf "command $1 undefined!\n"
         usage
