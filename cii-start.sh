@@ -4,7 +4,7 @@ declare -a address
 declare -a parameters
 
 usage(){
-    printf "USAGE: $0 master Allow-Origin...|slave|single Allow-Origin...\n"
+    printf "USAGE: $0 master|slave|single\n"
 }
 
 readParams(){
