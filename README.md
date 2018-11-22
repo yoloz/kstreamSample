@@ -51,6 +51,7 @@ xxx/cii_da/bin/cluster.sh
 -i 安装并启动
 -un 卸载
 -up patch.tar.gz 更新补丁
+-s 启动slave的reset服务
 ```  
 
 > 注意：  
@@ -84,7 +85,10 @@ web/       目录，存放编译后的页面静态文件
 xxx/cii_da/bin/cii_start.sh|cii_stop.sh #采集服务单独启动停止
 xxx/cii_da/bin/kazk.sh  #kafka/zookeepr启动停止
 ```  
-> 单机模式启动`xx/cii_start.sh single`  
+> 单机模式启动 `xx/cii_start.sh single`  
+集群模式启动 `xx/cii_start.sh master`  
+启动kafka `xx/kazk.sh -start ka`  
+启动zookeeper `xx/kazk.sh -start zk`
 
 # web访问方式
 

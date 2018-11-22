@@ -4,7 +4,8 @@ declare -a address
 declare -a parameters
 
 usage(){
-    printf "USAGE: $0 master|slave|single\n"
+    # slave的启动通过内部调用
+    printf "USAGE: $0 master|single\n"
 }
 
 readParams(){

@@ -13,6 +13,7 @@ usage(){
     printf  "       -i 安装并启动\n"
     printf  "       -un 卸载\n"
     printf  "       -up patch.tar.gz 更新补丁\n"
+    printf  "       -s 启动slave的reset服务\n"
 }
 initParameter(){
     local i=0
@@ -190,11 +191,11 @@ copyResource(){
     scp $dir/bin/update.sh $sshUser@$2:$1/bin
     scp $dir/bin/hosts.sh $sshUser@$2:$1/bin
     scp $dir/bin/hosts $sshUser@$2:$1/bin
+    scp $dir/bin/params $sshUser@$2:$1/bin
     if [ "$3" == 'master' ];then
         scp $dir/bin/cluster.sh $sshUser@$2:$1/bin
         scp $dir/bin/mysql.sh $sshUser@$2:$1/bin
         scp $dir/bin/nodes $sshUser@$2:$1/bin
-        scp $dir/bin/params $sshUser@$2:$1/bin
         scp $dir/bin/single.sh $sshUser@$2:$1/bin
         scp $dir/bin/un_mysql.sh $sshUser@$2:$1/bin
     fi
@@ -294,7 +295,7 @@ main(){
             remoteZK ${params[0]} $target ${params[1]} $i
             if [ "${params[1]}" == 'slave' ];then
                 printf "********启动${params[0]}的采集平台[slave]********\n"
-                ssh $sshUser@${params[0]} "$target/bin/cii-start.sh slave"
+                ssh $sshUser@${params[0]} "$target/bin/cii-start.sh slave ${params[0]}"
                 elif [ "${params[1]}" == 'master' ];then
                 printf "********启动${params[0]}的采集平台[master]********\n"
                 ssh $sshUser@${params[0]} "$target/bin/cii-start.sh master"
@@ -338,7 +339,21 @@ main(){
             target=${params[2]}'/cii_da'
             printf "********更新${params[0]}********\n"
             scp $2 $sshUser@${params[0]}:$target
-            ssh $sshUser@${params[0]} "$target/bin/update.sh $target/`basename $2` ${params[1]}"
+            if [ "${params[1]}" == 'slave' ];then
+                ssh $sshUser@${params[0]} "$target/bin/update.sh $target/`basename $2` ${params[1]} ${params[0]}"
+            else
+                ssh $sshUser@${params[0]} "$target/bin/update.sh $target/`basename $2` ${params[1]}"
+            fi
+        done
+        elif [ "$1" == '-s' ];then
+        for v in ${nodeConf[@]}
+        do
+            params=(${v//;/ })
+            target=${params[2]}'/cii_da'
+            if [ "${params[1]}" == 'slave' ];then
+                printf "********启动${params[0]}的采集平台[slave]********\n"
+                ssh $sshUser@${params[0]} "$target/bin/cii-start.sh slave ${params[0]}"
+            fi
         done
     else
         printf "option $1 undefined!\n"
