@@ -1,0 +1,35 @@
+//apply from "config.gradle"
+
+plugins {
+    id 'java'
+}
+
+group = project.property("group").toString()
+version = project.property("kafkaVersion").toString()
+sourceCompatibility = 1.8
+targetCompatibility = 1.8
+
+repositories {
+    mavenLocal()
+    maven {
+        url = 'http://repo.maven.apache.org/maven2'
+    }
+}
+
+//def kafkaVersion = '0.11.0.1'
+//def jettyVersion = '9.4.9.v20180320'
+
+dependencies {
+    compile 'org.slf4j:slf4j-log4j12:1.7.25', 'log4j:log4j:1.2.17'
+
+    compile group: 'org.eclipse.jetty', name: 'jetty-servlets', version: project.property("jettyVersion").toString()
+    compile group: 'org.eclipse.jetty', name: 'jetty-server', version: project.property("jettyVersion").toString()
+    compile group: 'org.eclipse.jetty', name: 'jetty-webapp', version: project.property("jettyVersion").toString()
+
+    compile project(':kstream')
+    
+    testCompile 'junit:junit:4.12'
+//    compile 'io.netty:netty:4.0.33'
+}
+
+

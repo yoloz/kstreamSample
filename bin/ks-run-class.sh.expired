@@ -1,0 +1,49 @@
+#!/usr/bin/env bash
+shopt -s nullglob
+if [ $# -lt 1 ];
+then
+  echo "USAGE: $0 [-daemon] -server main.properties [-test true/false]"
+  exit 1
+fi
+base_dir=$(dirname $0)/..
+if [ ! -d ${APP_DIR:=''} ]; then
+   echo "APP_DIR is empty..."
+   exit 1
+else
+   log_dir=${APP_DIR}/logs
+#   echo "Log recorded in $log_dir"
+   test -d ${log_dir} || mkdir -p ${log_dir}
+fi
+if [ ! -x ${JAVA:=''} ]; then
+   echo "java command error..."
+   exit 1
+fi
+function recursion(){
+    for f in `ls $1`
+    do
+       if [ -d $1"/"${f} ]; then
+          recursion $1"/"${f}
+       else
+          CLASSPATH=${CLASSPATH}:$1"/"${f}
+       fi
+    done
+}
+recursion ${base_dir}/libs
+if [ -f ${APP_DIR}/log4j.properties ]; then
+   KS_LOG4J_OPTS="-Dlog4j.configuration=file:$APP_DIR/log4j.properties"
+elif [ -f ${base_dir}/config/log4j.properties ]; then
+   KS_LOG4J_OPTS="-Dlog4j.configuration=file:$base_dir/config/log4j.properties"
+else
+   echo "can't find file log4j.properties..."
+   exit 1
+fi
+KS_LOG4J_OPTS="-Dks.logs.dir=$log_dir $KS_LOG4J_OPTS"
+KS_APP_DIR="-Dks.app.dir=$APP_DIR"
+if [ "x$1" = "x-daemon" ]; then
+  shift
+  nohup ${JAVA} ${KS_APP_DIR} ${KS_LOG4J_OPTS} -cp ${CLASSPATH}  com.unimas.kstream.Main "$@" > "$log_dir/ks.out" 2>&1 < /dev/null &
+else
+  exec ${JAVA} ${KS_APP_DIR} ${KS_LOG4J_OPTS} -cp ${CLASSPATH} com.unimas.kstream.Main "$@"
+fi
+
+

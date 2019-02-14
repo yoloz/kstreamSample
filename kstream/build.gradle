@@ -1,0 +1,29 @@
+plugins {
+    id 'java'
+}
+
+group = project.property("group").toString()
+version = project.property("kafkaVersion").toString()
+sourceCompatibility = 1.8
+targetCompatibility = 1.8
+
+repositories {
+    mavenLocal()
+    maven {
+        url = 'http://repo.maven.apache.org/maven2'
+    }
+}
+
+//def kafkaVersion = '0.11.0.1'
+
+dependencies {
+    compile 'org.slf4j:slf4j-log4j12:1.7.25', 'log4j:log4j:1.2.17',
+            'com.google.guava:guava:23.0', 'com.google.code.gson:gson:2.8.2',
+            'org.mapdb:mapdb:3.0.5', 'org.zbus:zbus:7.2.0'
+    compile group: 'org.apache.kafka', name: 'kafka-clients', version: project.property("kafkaVersion").toString()
+    compile group: 'org.apache.kafka', name: 'kafka-streams', version: project.property("kafkaVersion").toString()
+    compile group: 'org.apache.kafka', name: 'kafka_2.11', version: project.property("kafkaVersion").toString()
+            
+    testCompile group: 'junit', name: 'junit', version: '4.12'
+}
+
