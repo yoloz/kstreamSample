@@ -1,5 +1,29 @@
 ## KStream
 
+基于kafka stream的library开发，library提供了对存储于Kafka内的数据进行流式处理和分析的功能。下文仅限对kstream介绍，kafka stream可参考官方文档。
+> 暂支持string serialize，value为json格式数据。
+
+### web
+
+#### 数据源
+1. KStream
+KStream是一个数据流，在时间上是没有界限的，即数据的起始结束是不确定的。数据一直在持续的进入，计算然后输出。
+2. KTable
+KTable是一个完整的数据集，可以理解为关系库中的一张表。数据有更新，如果key已经存在则会被更新。相对静态的数据集，如白名单等可以初始化为table。KTable不支持后续的key值重新生成。
+**操作:**
+* 键值转换: 数据源中的key,value映射重新生成。key,value均是从原始json value中获取。生成后的key,value格式为json；
+* 时间转换: 对输入的或者计算生成的时间值字段格式化输出，支持时区转换；
+* Filter: 暂仅支持in,notIn和逻辑and操作；
+* 打标签: 对满足in,notIn的逻辑and条件数据添加键值对；
+* Window聚合: 统计合并窗口时间内的事件，支持字段不覆盖(int直接求和,string尾部追加)；
+* Join,leftJoin,outerJoin: 支持strean-stream,stream-table,table-table;
+**输出:**
+暂仅支持单源输出。
+* Kafka: 结果写入到kafka中；
+* Zbus: 结果写入到zbus中；
+* Sysout: 结果直接输出到控制台或日志中(主要用于测试)；
+
+
 ### 结构如下：
 ```
 KStream/
