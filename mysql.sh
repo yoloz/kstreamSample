@@ -50,7 +50,7 @@ printf "\n"
 <<EOF
 use mysql;
 flush privileges;
-update user set authentication_string=password('unimas') where user='root';
+update user set authentication_string=password('xxx') where user='xxxx';
 flush privileges;
 quit
 EOF
@@ -58,8 +58,8 @@ EOF
 service mysqld start
 mysql -uroot -punimas <<EOF
 flush privileges;
-alter user 'root'@'localhost' identified by 'unimas';
-grant all privileges on *.* to 'root'@'%' identified by 'unimas';
+alter user 'xxx'@'localhost' identified by 'xxx';
+grant all privileges on *.* to 'xxx'@'%' identified by 'xxxx';
 flush privileges;
 quit
 EOF
@@ -70,12 +70,12 @@ EOF
 function mysql_user() {
 mysql -uroot -punimas <<EOF
 flush privileges;
-create user 'lsjcj'@'%' identified by 'ciilsjcj'; 
-grant all privileges on *.* to 'lsjcj'@'%' identified by 'ciilsjcj';
+create user 'xxxx'@'%' identified by 'xxxxx'; 
+grant all privileges on *.* to 'xxxx'@'%' identified by 'xxxx';
 quit
 EOF
 #mysql数据
-mysql -uroot -punimas <<EOF
+mysql -uxxx -pxxxx <<EOF
 create database sdas;
 use sdas;
 source $dir/config/sdas.sql;
